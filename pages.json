@@ -1,0 +1,22 @@
+{
+  "subjects": [
+    {
+      "name": "수학과학",
+      "icon": "🔬",
+      "pages": [
+        {
+          "title": "인공지능 수학 기초",
+          "path": "수학과학/인공지능-수학-기초/index.html",
+          "emoji": "🧮",
+          "description": "고등학생 대상 AI 수학 입문 — 선형대수, 확률통계, 미적분, 경사하강법 10장 슬라이드.",
+          "tags": [
+            { "label": "AI", "color": "blue" },
+            { "label": "수학", "color": "purple" },
+            { "label": "고등학생", "color": "green" }
+          ],
+          "gradient": "linear-gradient(135deg, #0a0e1a, #1a2a4a, #4f9cf9)"
+        }
+      ]
+    }
+  ]
+}
