@@ -1,0 +1,799 @@
+<title>정의로 곡선을 찾다 — 이차곡선</title>
+<style>
+:root{
+  --paper:#EEF1F3;
+  --paper-2:#E2E8ED;
+  --board:#F7F9FA;
+  --ink:#1B2430;
+  --muted:#5B6472;
+  --grid:rgba(27,54,89,.14);
+  --grid-major:rgba(27,54,89,.28);
+  --accent:#24509C;
+  --accent-soft:rgba(36,80,156,.10);
+  --accent-2:#B8402A;
+  --accent-2-soft:rgba(184,64,42,.12);
+  --line:#B9C2CB;
+  --card-shadow: 0 1px 2px rgba(20,30,45,.06), 0 8px 24px rgba(20,30,45,.08);
+  --font-sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, Menlo, "Noto Sans Mono", monospace;
+  --font-var: Georgia, "Times New Roman", serif;
+}
+:root[data-theme="dark"]{
+  --paper:#0F1B2D;
+  --paper-2:#0B1522;
+  --board:#0C1826;
+  --ink:#E7EEF5;
+  --muted:#93A6BC;
+  --grid:rgba(140,180,220,.16);
+  --grid-major:rgba(140,180,220,.32);
+  --accent:#6FA8E0;
+  --accent-soft:rgba(111,168,224,.14);
+  --accent-2:#FF7A59;
+  --accent-2-soft:rgba(255,122,89,.16);
+  --line:#28374A;
+  --card-shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.35);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0F1B2D;
+    --paper-2:#0B1522;
+    --board:#0C1826;
+    --ink:#E7EEF5;
+    --muted:#93A6BC;
+    --grid:rgba(140,180,220,.16);
+    --grid-major:rgba(140,180,220,.32);
+    --accent:#6FA8E0;
+    --accent-soft:rgba(111,168,224,.14);
+    --accent-2:#FF7A59;
+    --accent-2-soft:rgba(255,122,89,.16);
+    --line:#28374A;
+    --card-shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.35);
+  }
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-sans);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.page{max-width:1180px;margin:0 auto;padding:36px 20px 64px;}
+.masthead{max-width:760px;margin-bottom:22px;}
+.eyebrow{
+  font-size:12.5px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--accent); font-weight:700; margin:0 0 10px;
+}
+h1{
+  font-size:clamp(24px,3.4vw,34px); margin:0 0 10px; font-weight:700;
+  text-wrap:balance; letter-spacing:-.01em;
+}
+.lede{color:var(--muted); font-size:15.5px; margin:0 0 14px; max-width:62ch;}
+.page-link a{
+  color:var(--accent); text-decoration:none; font-size:14px; font-weight:600;
+  border-bottom:1px solid transparent;
+}
+.page-link a:hover, .page-link a:focus-visible{border-bottom-color:var(--accent);}
+
+.tabs{display:flex; gap:6px; margin:26px 0 0; padding:0 4px;}
+.tab{
+  font-family:var(--font-sans); font-size:14.5px; font-weight:600;
+  color:var(--muted); background:var(--paper-2); border:1px solid var(--line);
+  border-bottom:none; border-radius:10px 10px 0 0; padding:11px 20px 13px;
+  cursor:pointer; position:relative; top:1px;
+}
+.tab.active{
+  color:var(--ink); background:var(--board); box-shadow:var(--card-shadow);
+  z-index:2;
+}
+.tab:focus-visible{outline:2px solid var(--accent); outline-offset:2px;}
+
+.board-wrap{
+  display:grid; grid-template-columns:1.5fr 1fr; gap:0;
+  background:var(--board); border:1px solid var(--line); border-radius:0 12px 12px 12px;
+  box-shadow:var(--card-shadow); overflow:hidden;
+}
+@media (max-width:840px){
+  .board-wrap{grid-template-columns:1fr;}
+}
+
+.board{padding:18px 18px 8px; display:flex; flex-direction:column; min-width:0;}
+.board svg{width:100%; height:auto; display:block; touch-action:none;}
+.board-caption{
+  font-size:13.5px; color:var(--muted); margin:10px 2px 4px; min-height:36px;
+}
+
+.card{
+  background:var(--paper-2); border-left:1px solid var(--line);
+  display:flex; position:relative; min-width:0;
+}
+.card-margin{
+  width:2px; background:var(--accent-2); opacity:.35; flex:none;
+  margin-left:34px;
+}
+.card-body{padding:22px 22px 24px 22px; display:flex; flex-direction:column; gap:16px; min-width:0; flex:1;}
+.card-body h2{font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0;}
+.var{font-family:var(--font-var); font-style:italic;}
+
+.readout{
+  display:flex; flex-direction:column; gap:8px;
+  background:var(--board); border:1px solid var(--line); border-radius:8px;
+  padding:14px 16px;
+}
+.readout-row{display:flex; justify-content:space-between; align-items:baseline; gap:12px; font-size:14px;}
+.readout-row .label{color:var(--muted);}
+.readout-row .value{font-family:var(--font-mono); font-variant-numeric:tabular-nums; font-weight:600;}
+.readout-row.diff .value{color:var(--ink);}
+
+.status{
+  border-radius:8px; padding:12px 14px; font-size:14px; font-weight:600;
+  background:var(--accent-soft); color:var(--accent); border:1px solid transparent;
+}
+
+.orient-control{display:flex; flex-direction:column; gap:8px;}
+.control-label{font-size:12.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:600;}
+.seg{display:flex; gap:6px;}
+.seg-btn{
+  font-family:var(--font-sans); font-size:13px; font-weight:600;
+  color:var(--muted); background:var(--board); border:1px solid var(--line);
+  border-radius:7px; padding:8px 10px; cursor:pointer; flex:1;
+}
+.seg-btn.active{color:var(--board); background:var(--accent); border-color:var(--accent);}
+.seg-btn:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+
+.controls{display:flex; flex-direction:column; gap:10px;}
+.controls .btn-row{display:flex; gap:8px; flex-wrap:wrap;}
+button.action{
+  font-family:var(--font-sans); font-size:13.5px; font-weight:600;
+  color:var(--ink); background:var(--board); border:1px solid var(--line);
+  border-radius:7px; padding:9px 14px; cursor:pointer;
+}
+button.action:hover{border-color:var(--accent);}
+button.action:focus-visible{outline:2px solid var(--accent); outline-offset:1px;}
+.toggle{display:flex; align-items:center; gap:8px; font-size:13.5px; color:var(--muted); cursor:pointer;}
+.toggle input{accent-color:var(--accent); width:15px; height:15px;}
+
+.reveal{
+  display:none; border:1px dashed var(--line); border-radius:8px; padding:12px 14px;
+  font-size:13.5px; color:var(--muted);
+}
+.reveal.show{display:block;}
+.reveal .eq{font-family:var(--font-mono); font-size:15px; color:var(--ink); margin-top:4px;}
+.reveal .eq .var{font-family:var(--font-var); font-style:italic;}
+
+.counter{margin:0; font-size:13px; color:var(--muted);}
+.counter b{color:var(--ink); font-family:var(--font-mono);}
+
+svg text{font-family:var(--font-sans); user-select:none;}
+.pt-handle{cursor:grab;}
+.pt-handle:active{cursor:grabbing;}
+</style>
+
+<div class="page">
+  <header class="masthead">
+    <p class="eyebrow">2022 개정 교육과정 · 기하 · 이차곡선</p>
+    <h1 id="pageTitle">포물선의 정의</h1>
+    <p class="lede" id="lede">한 직선 <span class="var">l</span>(준선)과 한 점 <span class="var">F</span>(초점)에 이르는 거리가 같은 점들의 집합</p>
+    <p class="page-link"><a href="#" id="linkToPage2" target="_blank" rel="noopener">2부. 표준방정식과 파라미터 탐구로 이동 →</a></p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-curve="parabola" role="tab" aria-selected="true">포물선</button>
+    <button class="tab" data-curve="ellipse" role="tab" aria-selected="false">타원</button>
+    <button class="tab" data-curve="hyperbola" role="tab" aria-selected="false">쌍곡선</button>
+  </div>
+
+  <main class="board-wrap">
+    <section class="board">
+      <svg id="canvas" viewBox="0 0 680 520" aria-label="이차곡선 작도판">
+        <g id="gridLayer"></g>
+        <g id="axisLayer"></g>
+
+        <!-- reveal overlays (actual curve) -->
+        <path id="reveal-parabola" fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="2 4" opacity="0" />
+        <path id="reveal-ellipse" fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="2 4" opacity="0" />
+        <path id="reveal-hyperbola" fill="none" stroke="var(--muted)" stroke-width="1.6" stroke-dasharray="2 4" opacity="0" />
+
+        <!-- PARABOLA group -->
+        <g id="grp-parabola">
+          <path id="p-drawn" fill="none" stroke="var(--accent-2)" stroke-width="2.2" />
+          <line id="p-directrix" stroke="var(--ink)" stroke-width="1.4" stroke-dasharray="5 4" opacity=".6"/>
+          <text id="p-directrix-label" font-size="12" fill="var(--muted)">준선 l</text>
+          <circle id="p-focus" r="4.5" fill="var(--accent)"/>
+          <text id="p-focus-label" font-size="12" fill="var(--accent)" font-weight="700">F</text>
+
+          <line id="p-seg-f" stroke="var(--accent)" stroke-width="1.6"/>
+          <text id="p-seg-f-label" font-size="12" fill="var(--accent)" font-family="var(--font-mono)"></text>
+
+          <line id="p-seg-d" stroke="var(--accent-2)" stroke-width="1.6"/>
+          <text id="p-seg-d-label" font-size="12" fill="var(--accent-2)" font-family="var(--font-mono)"></text>
+
+          <circle id="p-point" class="pt-handle" r="9" fill="var(--board)" stroke="var(--ink)" stroke-width="2.4"/>
+        </g>
+
+        <!-- ELLIPSE group -->
+        <g id="grp-ellipse" style="display:none">
+          <path id="e-drawn" fill="none" stroke="var(--accent-2)" stroke-width="2.2" />
+          <circle id="e-f1" r="4.5" fill="var(--accent)"/>
+          <text id="e-f1-label" font-size="12" fill="var(--accent)" font-weight="700">F₁</text>
+          <circle id="e-f2" r="4.5" fill="var(--accent)"/>
+          <text id="e-f2-label" font-size="12" fill="var(--accent)" font-weight="700">F₂</text>
+
+          <line id="e-seg1" stroke="var(--accent)" stroke-width="1.6"/>
+          <text id="e-seg1-label" font-size="12" fill="var(--accent)" font-family="var(--font-mono)"></text>
+          <line id="e-seg2" stroke="var(--accent-2)" stroke-width="1.6"/>
+          <text id="e-seg2-label" font-size="12" fill="var(--accent-2)" font-family="var(--font-mono)"></text>
+
+          <circle id="e-point" class="pt-handle" r="9" fill="var(--board)" stroke="var(--ink)" stroke-width="2.4"/>
+        </g>
+
+        <!-- HYPERBOLA group -->
+        <g id="grp-hyperbola" style="display:none">
+          <path id="h-drawn-pos" fill="none" stroke="var(--accent-2)" stroke-width="2.2" />
+          <path id="h-drawn-neg" fill="none" stroke="var(--accent-2)" stroke-width="2.2" />
+          <circle id="h-f1" r="4.5" fill="var(--accent)"/>
+          <text id="h-f1-label" font-size="12" fill="var(--accent)" font-weight="700">F₁</text>
+          <circle id="h-f2" r="4.5" fill="var(--accent)"/>
+          <text id="h-f2-label" font-size="12" fill="var(--accent)" font-weight="700">F₂</text>
+
+          <line id="h-seg1" stroke="var(--accent)" stroke-width="1.6"/>
+          <text id="h-seg1-label" font-size="12" fill="var(--accent)" font-family="var(--font-mono)"></text>
+          <line id="h-seg2" stroke="var(--accent-2)" stroke-width="1.6"/>
+          <text id="h-seg2-label" font-size="12" fill="var(--accent-2)" font-family="var(--font-mono)"></text>
+
+          <circle id="h-point" class="pt-handle" r="9" fill="var(--board)" stroke="var(--ink)" stroke-width="2.4"/>
+        </g>
+      </svg>
+      <p class="board-caption" id="instructionText"></p>
+    </section>
+
+    <aside class="card">
+      <div class="card-margin"></div>
+      <div class="card-body">
+        <div class="orient-control" id="orientationControl">
+          <span class="control-label">초점 위치</span>
+          <div class="seg">
+            <button class="seg-btn active" id="orientXBtn" type="button">F(p, 0) · x축</button>
+            <button class="seg-btn" id="orientYBtn" type="button">F(0, p) · y축</button>
+          </div>
+        </div>
+
+        <div class="orient-control" id="branchControl" style="display:none">
+          <span class="control-label">가지 선택</span>
+          <div class="seg">
+            <button class="seg-btn active" id="branchPosBtn" type="button">오른쪽 가지</button>
+            <button class="seg-btn" id="branchNegBtn" type="button">왼쪽 가지</button>
+          </div>
+        </div>
+
+        <div class="readout" id="readout"></div>
+
+        <div class="status" id="statusBanner">점을 움직여 보세요.</div>
+
+        <div class="controls">
+          <div class="btn-row">
+            <button class="action" id="clearTraceBtn">자취 지우기</button>
+            <button class="action" id="resetPointBtn">점 위치 초기화</button>
+          </div>
+          <label class="toggle"><input type="checkbox" id="revealToggle"> 정답 곡선 + 방정식 보기</label>
+        </div>
+
+        <div class="reveal" id="revealPanel"></div>
+
+        <p class="counter" id="counter-range">그려진 범위: <b id="rangeText">y ∈ [0.00, 0.00]</b></p>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+(function(){
+  var svg = document.getElementById('canvas');
+  var S = 36, CX = 340, CY = 260;
+  function toXY(x,y){ return {X: CX + x*S, Y: CY - y*S}; }
+  function toWorld(X,Y){ return {x:(X-CX)/S, y:(CY-Y)/S}; }
+  var NS = 'http://www.w3.org/2000/svg';
+
+  // ---- grid & axes ----
+  (function drawGrid(){
+    var g = document.getElementById('gridLayer');
+    var ax = document.getElementById('axisLayer');
+    for(var x=-9;x<=9;x++){
+      var a=toXY(x,-7), b=toXY(x,7);
+      var l=document.createElementNS(NS,'line');
+      l.setAttribute('x1',a.X); l.setAttribute('y1',a.Y); l.setAttribute('x2',b.X); l.setAttribute('y2',b.Y);
+      l.setAttribute('stroke', x===0? 'var(--grid-major)':'var(--grid)');
+      l.setAttribute('stroke-width', x===0? 1.4:1);
+      g.appendChild(l);
+    }
+    for(var y=-7;y<=7;y++){
+      var a2=toXY(-9,y), b2=toXY(9,y);
+      var l2=document.createElementNS(NS,'line');
+      l2.setAttribute('x1',a2.X); l2.setAttribute('y1',a2.Y); l2.setAttribute('x2',b2.X); l2.setAttribute('y2',b2.Y);
+      l2.setAttribute('stroke', y===0? 'var(--grid-major)':'var(--grid)');
+      l2.setAttribute('stroke-width', y===0? 1.4:1);
+      g.appendChild(l2);
+    }
+    for(var t=-8;t<=8;t+=2){
+      if(t===0) continue;
+      var px = toXY(t,0);
+      var tx = document.createElementNS(NS,'text');
+      tx.setAttribute('x',px.X+3); tx.setAttribute('y',CY+14); tx.setAttribute('font-size','10.5'); tx.setAttribute('fill','var(--muted)');
+      tx.textContent = t; ax.appendChild(tx);
+      var py = toXY(0,t);
+      var ty = document.createElementNS(NS,'text');
+      ty.setAttribute('x',CX+5); ty.setAttribute('y',py.Y+3); ty.setAttribute('font-size','10.5'); ty.setAttribute('fill','var(--muted)');
+      ty.textContent = t; ax.appendChild(ty);
+    }
+  })();
+
+  function dist(a,b){ return Math.hypot(a.x-b.x, a.y-b.y); }
+  function fmt(n){ return n.toFixed(2); }
+  function clampWorld(x,y){
+    return {x: Math.max(-8.4, Math.min(8.4,x)), y: Math.max(-6.4, Math.min(6.4,y))};
+  }
+
+  // ---- state per curve ----
+  var state = {
+    parabola:{ p:2, orientation:'x', t:0, minT:0, maxT:0 },
+    ellipse:{ a:4, b:Math.sqrt(7), orientation:'x', theta:0, minT:0, maxT:0 },
+    hyperbola:{ a:2.5, b:Math.sqrt(4*4-2.5*2.5), orientation:'x', branch:'pos', t:0, posMinT:0, posMaxT:0, negMinT:0, negMaxT:0 }
+  };
+  var active = 'parabola';
+
+  var titles = {
+    parabola: '포물선의 정의',
+    ellipse: '타원의 정의',
+    hyperbola: '쌍곡선의 정의'
+  };
+  var ledeTexts = {
+    parabola: '한 직선 <span class="var">l</span>(준선)과 한 점 <span class="var">F</span>(초점)에 이르는 거리가 같은 점들의 집합',
+    ellipse: '두 점 <span class="var">F₁</span>, <span class="var">F₂</span>(초점)로부터의 거리의 합이 일정한 점들의 집합',
+    hyperbola: '두 점 <span class="var">F₁</span>, <span class="var">F₂</span>(초점)로부터의 거리의 차(절댓값)가 일정한 점들의 집합'
+  };
+  var orientLabels = {
+    parabola: ['F(p, 0) · x축', 'F(0, p) · y축'],
+    ellipse: ['장축 x축 · F(±c, 0)', '장축 y축 · F(0, ±c)'],
+    hyperbola: ['초점 x축 · F(±c, 0)', '초점 y축 · F(0, ±c)']
+  };
+
+  function parabolaInstruction(st){
+    return st.orientation==='x'
+      ? '점 P를 위아래로 드래그해 보세요. P는 초점과 준선까지의 거리를 항상 같게 유지한 채로만 움직이며, 지나간 자리마다 포물선이 그려집니다.'
+      : '점 P를 좌우로 드래그해 보세요. P는 초점과 준선까지의 거리를 항상 같게 유지한 채로만 움직이며, 지나간 자리마다 포물선이 그려집니다.';
+  }
+  function ellipseInstruction(st){
+    return '점 P를 원점 둘레로 빙 둘러 드래그해 보세요. P는 두 초점까지의 거리의 합을 항상 2a = '+fmt(2*st.a)+'로 유지한 채로만 움직이며, 지나간 자리마다 타원이 그려집니다.';
+  }
+  function hyperbolaInstruction(st){
+    var axis = st.orientation==='x' ? '위아래' : '좌우';
+    return '점 P를 '+axis+'로 드래그해 보세요. P는 두 초점까지의 거리의 차를 항상 2a = '+fmt(2*st.a)+'로 유지한 채로만 움직이며, 지나간 자리마다 한쪽 가지가 그려집니다. 반대쪽 가지는 "가지 선택"에서 전환해 살펴보세요.';
+  }
+  function updateInstructionText(curve){
+    var st = state[curve];
+    var text = curve==='parabola' ? parabolaInstruction(st)
+      : curve==='ellipse' ? ellipseInstruction(st)
+      : hyperbolaInstruction(st);
+    document.getElementById('instructionText').textContent = text;
+  }
+
+  function setText(id, html){ document.getElementById(id).innerHTML = html; }
+  function setLine(id, x1,y1,x2,y2){
+    var e=document.getElementById(id);
+    e.setAttribute('x1',x1); e.setAttribute('y1',y1); e.setAttribute('x2',x2); e.setAttribute('y2',y2);
+  }
+  function setCircle(id, X,Y){
+    var e=document.getElementById(id);
+    e.setAttribute('cx',X); e.setAttribute('cy',Y);
+  }
+  function setLabel(id, X, Y, txt){
+    var e=document.getElementById(id);
+    e.setAttribute('x',X); e.setAttribute('y',Y); e.textContent = txt;
+  }
+  function setStatus(text){
+    document.getElementById('statusBanner').textContent = text;
+  }
+
+  function pathFromPoints(pts){
+    return pts.map(function(pt,i){ var s=toXY(pt.x,pt.y); return (i===0?'M':'L')+s.X.toFixed(1)+','+s.Y.toFixed(1); }).join(' ');
+  }
+  function rowHtml(label, value, isDiff){
+    return '<div class="readout-row'+(isDiff?' diff':'')+'"><span class="label">'+label+'</span><span class="value">'+value+'</span></div>';
+  }
+
+  function updateRangeText(curve){
+    var st = state[curve];
+    var txt;
+    if(curve==='parabola'){
+      var freeVar = st.orientation==='x' ? 'y' : 'x';
+      txt = freeVar + ' ∈ [' + fmt(st.minT) + ', ' + fmt(st.maxT) + ']';
+    } else if(curve==='ellipse'){
+      var toDeg = function(r){ return r*180/Math.PI; };
+      txt = 'θ ∈ [' + toDeg(st.minT).toFixed(0) + '°, ' + toDeg(st.maxT).toFixed(0) + '°]';
+    } else {
+      var freeVar2 = st.orientation==='x' ? 'y' : 'x';
+      var branchLabel = st.branch==='pos'
+        ? (st.orientation==='x' ? '오른쪽' : '위쪽')
+        : (st.orientation==='x' ? '왼쪽' : '아래쪽');
+      var mn = st.branch==='pos' ? st.posMinT : st.negMinT;
+      var mx = st.branch==='pos' ? st.posMaxT : st.negMaxT;
+      txt = branchLabel + ' 가지 ' + freeVar2 + ' ∈ [' + fmt(mn) + ', ' + fmt(mx) + ']';
+    }
+    document.getElementById('rangeText').textContent = txt;
+  }
+
+  // ---- PARABOLA ----
+  function pointOnParabola(st, t){
+    return st.orientation==='x'
+      ? {x: (t*t)/(4*st.p), y: t}
+      : {x: t, y: (t*t)/(4*st.p)};
+  }
+  function updateParabola(){
+    var st = state.parabola;
+    var isX = st.orientation === 'x';
+    var F = isX ? {x:st.p, y:0} : {x:0, y:st.p};
+    var dirConst = -st.p;
+    var Fxy = toXY(F.x,F.y);
+    setCircle('p-focus', Fxy.X, Fxy.Y);
+    setLabel('p-focus-label', Fxy.X + (isX?8:10), Fxy.Y + (isX?-8:-10), 'F');
+
+    var dTop, dBot;
+    if(isX){ dTop = toXY(dirConst, 6.6); dBot = toXY(dirConst,-6.6); }
+    else { dTop = toXY(-8.6, dirConst); dBot = toXY(8.6, dirConst); }
+    setLine('p-directrix', dTop.X, dTop.Y, dBot.X, dBot.Y);
+    if(isX){ setLabel('p-directrix-label', dTop.X-30, dTop.Y-8, '준선 l'); }
+    else { setLabel('p-directrix-label', dBot.X-34, dBot.Y + (st.p>0? 16:-8), '준선 l'); }
+
+    var P = pointOnParabola(st, st.t);
+    var Pxy = toXY(P.x,P.y);
+    var foot = isX ? {x:dirConst, y:P.y} : {x:P.x, y:dirConst};
+    var footXy = toXY(foot.x, foot.y);
+
+    setLine('p-seg-f', Pxy.X, Pxy.Y, Fxy.X, Fxy.Y);
+    setLine('p-seg-d', Pxy.X, Pxy.Y, footXy.X, footXy.Y);
+
+    var d1 = dist(P,F);
+    var d2 = isX ? Math.abs(P.x-dirConst) : Math.abs(P.y-dirConst);
+    setLabel('p-seg-f-label', (Pxy.X+Fxy.X)/2+8, (Pxy.Y+Fxy.Y)/2-6, fmt(d1));
+    setLabel('p-seg-d-label', (Pxy.X+footXy.X)/2, isX? Pxy.Y-10 : (Pxy.Y+footXy.Y)/2, fmt(d2));
+
+    setCircle('p-point', Pxy.X, Pxy.Y);
+
+    var diff = Math.abs(d1-d2);
+    setText('readout', rowHtml('|PF| (초점까지)', fmt(d1)) + rowHtml('d(P, l) (준선까지)', fmt(d2)) + rowHtml('차이 (항상 0)', fmt(diff), true));
+    setStatus('P는 두 거리를 항상 같게 유지한 채로만 움직입니다.');
+
+    var drawn = document.getElementById('p-drawn');
+    if(st.minT===st.maxT){
+      drawn.setAttribute('d','');
+    } else {
+      var dpts=[];
+      var step = Math.max(0.05,(st.maxT-st.minT)/160);
+      for(var tt=st.minT; tt<=st.maxT+1e-9; tt+=step){ dpts.push(pointOnParabola(st, tt)); }
+      drawn.setAttribute('d', pathFromPoints(dpts));
+    }
+    if(active==='parabola') updateRangeText('parabola');
+    if(revealOn) buildRevealParabola(st);
+  }
+  function buildRevealParabola(st){
+    var pts=[];
+    if(st.orientation==='x'){
+      for(var v=0; v<=8; v+=0.15){ var w=Math.sqrt(4*st.p*v); pts.push({x:v,y:w}); }
+      var up = pts, down = pts.slice().reverse().map(function(p){return {x:p.x,y:-p.y};});
+      document.getElementById('reveal-parabola').setAttribute('d', pathFromPoints(up.concat(down)));
+    } else {
+      for(var v2=0; v2<=8; v2+=0.15){ var w2=Math.sqrt(4*st.p*v2); pts.push({x:w2,y:v2}); }
+      var right = pts, left = pts.slice().reverse().map(function(p){return {x:-p.x,y:p.y};});
+      document.getElementById('reveal-parabola').setAttribute('d', pathFromPoints(right.concat(left)));
+    }
+  }
+
+  // ---- ELLIPSE ----
+  function pointOnEllipse(st, theta){
+    return st.orientation==='x'
+      ? {x: st.a*Math.cos(theta), y: st.b*Math.sin(theta)}
+      : {x: st.b*Math.cos(theta), y: st.a*Math.sin(theta)};
+  }
+  function updateEllipse(){
+    var st = state.ellipse;
+    var isX = st.orientation==='x';
+    var c = Math.sqrt(st.a*st.a - st.b*st.b);
+    var F1 = isX ? {x:-c,y:0} : {x:0,y:-c};
+    var F2 = isX ? {x:c,y:0} : {x:0,y:c};
+    var F1xy=toXY(F1.x,F1.y), F2xy=toXY(F2.x,F2.y);
+    setCircle('e-f1', F1xy.X, F1xy.Y); setLabel('e-f1-label', F1xy.X + (isX?-8:8), F1xy.Y-10, 'F₁');
+    setCircle('e-f2', F2xy.X, F2xy.Y); setLabel('e-f2-label', F2xy.X + (isX?6:8), F2xy.Y-10, 'F₂');
+
+    var P = pointOnEllipse(st, st.theta);
+    var Pxy = toXY(P.x,P.y);
+    setLine('e-seg1', Pxy.X,Pxy.Y, F1xy.X,F1xy.Y);
+    setLine('e-seg2', Pxy.X,Pxy.Y, F2xy.X,F2xy.Y);
+
+    var d1=dist(P,F1), d2=dist(P,F2);
+    setLabel('e-seg1-label', (Pxy.X+F1xy.X)/2-14, (Pxy.Y+F1xy.Y)/2-6, fmt(d1));
+    setLabel('e-seg2-label', (Pxy.X+F2xy.X)/2+6, (Pxy.Y+F2xy.Y)/2-6, fmt(d2));
+    setCircle('e-point', Pxy.X, Pxy.Y);
+
+    var sum = d1+d2;
+    setText('readout', rowHtml('|PF₁|', fmt(d1)) + rowHtml('|PF₂|', fmt(d2)) + rowHtml('합 (항상 2a='+fmt(2*st.a)+')', fmt(sum), true));
+    setStatus('P는 두 거리의 합을 항상 2a로 유지한 채로만 움직입니다.');
+
+    var drawn = document.getElementById('e-drawn');
+    if(st.minT===st.maxT){
+      drawn.setAttribute('d','');
+    } else {
+      var pts=[];
+      var step = Math.max(0.02,(st.maxT-st.minT)/300);
+      for(var th=st.minT; th<=st.maxT+1e-9; th+=step){ pts.push(pointOnEllipse(st, th)); }
+      drawn.setAttribute('d', pathFromPoints(pts));
+    }
+    if(active==='ellipse') updateRangeText('ellipse');
+    if(revealOn) buildRevealEllipse(st);
+  }
+  function buildRevealEllipse(st){
+    var pts=[];
+    for(var t=0;t<=Math.PI*2+0.01;t+=0.03){ pts.push(pointOnEllipse(st,t)); }
+    document.getElementById('reveal-ellipse').setAttribute('d', pathFromPoints(pts));
+  }
+
+  // ---- HYPERBOLA ----
+  function pointOnHyperbola(st, t, sign){
+    var mag = st.a*Math.sqrt(1+(t*t)/(st.b*st.b));
+    return st.orientation==='x' ? {x: sign*mag, y: t} : {x: t, y: sign*mag};
+  }
+  function updateHyperbola(){
+    var st = state.hyperbola;
+    var isX = st.orientation==='x';
+    var c = Math.sqrt(st.a*st.a + st.b*st.b);
+    var F1 = isX ? {x:-c,y:0} : {x:0,y:-c};
+    var F2 = isX ? {x:c,y:0} : {x:0,y:c};
+    var F1xy=toXY(F1.x,F1.y), F2xy=toXY(F2.x,F2.y);
+    setCircle('h-f1', F1xy.X, F1xy.Y); setLabel('h-f1-label', F1xy.X + (isX?-8:8), F1xy.Y-10, 'F₁');
+    setCircle('h-f2', F2xy.X, F2xy.Y); setLabel('h-f2-label', F2xy.X + (isX?6:8), F2xy.Y-10, 'F₂');
+
+    var sign = st.branch==='pos' ? 1 : -1;
+    var P = pointOnHyperbola(st, st.t, sign);
+    var Pxy = toXY(P.x,P.y);
+    setLine('h-seg1', Pxy.X,Pxy.Y, F1xy.X,F1xy.Y);
+    setLine('h-seg2', Pxy.X,Pxy.Y, F2xy.X,F2xy.Y);
+
+    var d1=dist(P,F1), d2=dist(P,F2);
+    setLabel('h-seg1-label', (Pxy.X+F1xy.X)/2-14, (Pxy.Y+F1xy.Y)/2-6, fmt(d1));
+    setLabel('h-seg2-label', (Pxy.X+F2xy.X)/2+6, (Pxy.Y+F2xy.Y)/2-6, fmt(d2));
+    setCircle('h-point', Pxy.X, Pxy.Y);
+
+    var diff = Math.abs(d1-d2);
+    setText('readout', rowHtml('|PF₁|', fmt(d1)) + rowHtml('|PF₂|', fmt(d2)) + rowHtml('차 (항상 2a='+fmt(2*st.a)+')', fmt(diff), true));
+    setStatus('P는 두 거리의 차를 항상 2a로 유지한 채로만 움직입니다.');
+
+    var posEl = document.getElementById('h-drawn-pos');
+    if(st.posMinT===st.posMaxT){ posEl.setAttribute('d',''); }
+    else {
+      var ppts=[]; var pstep=Math.max(0.05,(st.posMaxT-st.posMinT)/160);
+      for(var t1=st.posMinT; t1<=st.posMaxT+1e-9; t1+=pstep){ ppts.push(pointOnHyperbola(st,t1,1)); }
+      posEl.setAttribute('d', pathFromPoints(ppts));
+    }
+    var negEl = document.getElementById('h-drawn-neg');
+    if(st.negMinT===st.negMaxT){ negEl.setAttribute('d',''); }
+    else {
+      var npts=[]; var nstep=Math.max(0.05,(st.negMaxT-st.negMinT)/160);
+      for(var t2=st.negMinT; t2<=st.negMaxT+1e-9; t2+=nstep){ npts.push(pointOnHyperbola(st,t2,-1)); }
+      negEl.setAttribute('d', pathFromPoints(npts));
+    }
+
+    if(active==='hyperbola') updateRangeText('hyperbola');
+    if(revealOn) buildRevealHyperbola(st);
+  }
+  function buildRevealHyperbola(st){
+    var pts1=[], pts2=[];
+    for(var t=-8; t<=8; t+=0.15){ pts1.push(pointOnHyperbola(st,t,1)); pts2.push(pointOnHyperbola(st,t,-1)); }
+    document.getElementById('reveal-hyperbola').setAttribute('d', pathFromPoints(pts1)+' '+pathFromPoints(pts2));
+  }
+
+  var updaters = {parabola:updateParabola, ellipse:updateEllipse, hyperbola:updateHyperbola};
+
+  // ---- reveal overlays (answer + equation) ----
+  var revealOn = false;
+  var revealEquations = {
+    parabola: function(st){
+      return st.orientation==='x'
+        ? '<span class="var">y</span>² = '+ (4*st.p).toFixed(0) +'<span class="var">x</span>'
+        : '<span class="var">x</span>² = '+ (4*st.p).toFixed(0) +'<span class="var">y</span>';
+    },
+    ellipse: function(st){
+      var a2=(st.a*st.a).toFixed(1), b2=(st.b*st.b).toFixed(1);
+      return st.orientation==='x'
+        ? '<span class="var">x</span>²/'+a2+' + <span class="var">y</span>²/'+b2+' = 1'
+        : '<span class="var">x</span>²/'+b2+' + <span class="var">y</span>²/'+a2+' = 1';
+    },
+    hyperbola: function(st){
+      var a2=(st.a*st.a).toFixed(1), b2=(st.b*st.b).toFixed(1);
+      return st.orientation==='x'
+        ? '<span class="var">x</span>²/'+a2+' − <span class="var">y</span>²/'+b2+' = 1'
+        : '<span class="var">y</span>²/'+a2+' − <span class="var">x</span>²/'+b2+' = 1';
+    }
+  };
+
+  function refreshReveal(){
+    var panel = document.getElementById('revealPanel');
+    if(!revealOn){ panel.classList.remove('show');
+      ['reveal-parabola','reveal-ellipse','reveal-hyperbola'].forEach(function(id){document.getElementById(id).setAttribute('opacity',0);});
+      return;
+    }
+    panel.classList.add('show');
+    ['parabola','ellipse','hyperbola'].forEach(function(k){
+      document.getElementById('reveal-'+k).setAttribute('opacity', k===active? 0.9:0);
+    });
+    panel.innerHTML = '이 곡선의 표준방정식<div class="eq">'+revealEquations[active](state[active])+'</div>';
+    updaters[active]();
+  }
+
+  document.getElementById('revealToggle').addEventListener('change', function(e){
+    revealOn = e.target.checked;
+    refreshReveal();
+  });
+
+  // ---- tabs ----
+  var tabs = document.querySelectorAll('.tab');
+  var groups = {parabola:'grp-parabola', ellipse:'grp-ellipse', hyperbola:'grp-hyperbola'};
+
+  function updateOrientButtons(curve){
+    var labels = orientLabels[curve];
+    document.getElementById('orientXBtn').textContent = labels[0];
+    document.getElementById('orientYBtn').textContent = labels[1];
+    document.getElementById('orientXBtn').classList.toggle('active', state[curve].orientation==='x');
+    document.getElementById('orientYBtn').classList.toggle('active', state[curve].orientation==='y');
+  }
+  function updateBranchButtons(){
+    var st = state.hyperbola;
+    var labels = st.orientation==='x' ? ['오른쪽 가지 (x>0)','왼쪽 가지 (x<0)'] : ['위쪽 가지 (y>0)','아래쪽 가지 (y<0)'];
+    document.getElementById('branchPosBtn').textContent = labels[0];
+    document.getElementById('branchNegBtn').textContent = labels[1];
+    document.getElementById('branchPosBtn').classList.toggle('active', st.branch==='pos');
+    document.getElementById('branchNegBtn').classList.toggle('active', st.branch==='neg');
+  }
+
+  tabs.forEach(function(tab){
+    tab.addEventListener('click', function(){
+      tabs.forEach(function(t){t.classList.remove('active'); t.setAttribute('aria-selected','false');});
+      tab.classList.add('active'); tab.setAttribute('aria-selected','true');
+      var curve = tab.getAttribute('data-curve');
+      Object.keys(groups).forEach(function(k){
+        document.getElementById(groups[k]).style.display = (k===curve)?'':'none';
+      });
+      active = curve;
+      document.getElementById('pageTitle').textContent = titles[curve];
+      document.getElementById('lede').innerHTML = ledeTexts[curve];
+      updateInstructionText(curve);
+      updateOrientButtons(curve);
+      document.getElementById('branchControl').style.display = (curve==='hyperbola')?'':'none';
+      if(curve==='hyperbola') updateBranchButtons();
+      refreshReveal();
+      updaters[curve]();
+    });
+  });
+
+  // ---- drag handling ----
+  var dragging = null;
+  var pointIds = {parabola:'p-point', ellipse:'e-point', hyperbola:'h-point'};
+  Object.keys(pointIds).forEach(function(k){
+    var el = document.getElementById(pointIds[k]);
+    el.addEventListener('pointerdown', function(e){
+      dragging = k;
+      el.setPointerCapture(e.pointerId);
+    });
+  });
+  svg.addEventListener('pointermove', function(e){
+    if(!dragging) return;
+    var rect = svg.getBoundingClientRect();
+    var vbX = (e.clientX - rect.left) * (680/rect.width);
+    var vbY = (e.clientY - rect.top) * (520/rect.height);
+    var w = toWorld(vbX, vbY);
+    w = clampWorld(w.x, w.y);
+
+    if(dragging === 'parabola'){
+      var pst = state.parabola;
+      var raw = (pst.orientation==='x') ? w.y : w.x;
+      var t = Math.max(-6.3, Math.min(6.3, raw));
+      pst.t = t;
+      pst.minT = Math.min(pst.minT, t);
+      pst.maxT = Math.max(pst.maxT, t);
+    } else if(dragging === 'ellipse'){
+      var est = state.ellipse;
+      var rawTheta = Math.atan2(w.y, w.x);
+      var prevWrapped = ((est.theta % (2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+      var dAngle = rawTheta - prevWrapped;
+      if(dAngle > Math.PI) dAngle -= 2*Math.PI;
+      if(dAngle < -Math.PI) dAngle += 2*Math.PI;
+      est.theta += dAngle;
+      est.minT = Math.min(est.minT, est.theta);
+      est.maxT = Math.max(est.maxT, est.theta);
+    } else {
+      var hst = state.hyperbola;
+      var rawH = (hst.orientation==='x') ? w.y : w.x;
+      var tH = Math.max(-6.3, Math.min(6.3, rawH));
+      hst.t = tH;
+      if(hst.branch==='pos'){ hst.posMinT = Math.min(hst.posMinT, tH); hst.posMaxT = Math.max(hst.posMaxT, tH); }
+      else { hst.negMinT = Math.min(hst.negMinT, tH); hst.negMaxT = Math.max(hst.negMaxT, tH); }
+    }
+    updaters[dragging]();
+  });
+  window.addEventListener('pointerup', function(){ dragging = null; });
+
+  // ---- controls ----
+  document.getElementById('clearTraceBtn').addEventListener('click', function(){
+    var st = state[active];
+    if(active==='parabola'){
+      st.minT = st.maxT = st.t;
+      document.getElementById('p-drawn').setAttribute('d','');
+    } else if(active==='ellipse'){
+      st.minT = st.maxT = st.theta;
+      document.getElementById('e-drawn').setAttribute('d','');
+    } else {
+      if(st.branch==='pos'){ st.posMinT = st.posMaxT = st.t; document.getElementById('h-drawn-pos').setAttribute('d',''); }
+      else { st.negMinT = st.negMaxT = st.t; document.getElementById('h-drawn-neg').setAttribute('d',''); }
+    }
+    updaters[active]();
+  });
+
+  document.getElementById('resetPointBtn').addEventListener('click', function(){
+    var st = state[active];
+    if(active==='parabola'){
+      st.t = 0; st.minT = 0; st.maxT = 0;
+      document.getElementById('p-drawn').setAttribute('d','');
+    } else if(active==='ellipse'){
+      st.theta = 0; st.minT = 0; st.maxT = 0;
+      document.getElementById('e-drawn').setAttribute('d','');
+    } else {
+      st.t = 0; st.branch = 'pos'; st.posMinT = st.posMaxT = 0; st.negMinT = st.negMaxT = 0;
+      document.getElementById('h-drawn-pos').setAttribute('d','');
+      document.getElementById('h-drawn-neg').setAttribute('d','');
+      updateBranchButtons();
+    }
+    updaters[active]();
+  });
+
+  // ---- orientation & branch toggles ----
+  function setCurveOrientation(curve, o){
+    var st = state[curve];
+    if(st.orientation===o) return;
+    st.orientation = o;
+    if(curve==='parabola'){
+      st.t=0; st.minT=0; st.maxT=0;
+      document.getElementById('p-drawn').setAttribute('d','');
+    } else if(curve==='ellipse'){
+      st.theta=0; st.minT=0; st.maxT=0;
+      document.getElementById('e-drawn').setAttribute('d','');
+    } else {
+      st.t=0; st.branch='pos'; st.posMinT=st.posMaxT=0; st.negMinT=st.negMaxT=0;
+      document.getElementById('h-drawn-pos').setAttribute('d','');
+      document.getElementById('h-drawn-neg').setAttribute('d','');
+      updateBranchButtons();
+    }
+    updateOrientButtons(curve);
+    updateInstructionText(curve);
+    updaters[curve]();
+  }
+  document.getElementById('orientXBtn').addEventListener('click', function(){ setCurveOrientation(active, 'x'); });
+  document.getElementById('orientYBtn').addEventListener('click', function(){ setCurveOrientation(active, 'y'); });
+
+  document.getElementById('branchPosBtn').addEventListener('click', function(){
+    var st = state.hyperbola;
+    if(st.branch==='pos') return;
+    st.branch='pos'; updateBranchButtons(); updateHyperbola();
+  });
+  document.getElementById('branchNegBtn').addEventListener('click', function(){
+    var st = state.hyperbola;
+    if(st.branch==='neg') return;
+    st.branch='neg'; updateBranchButtons(); updateHyperbola();
+  });
+
+  // ---- init ----
+  document.getElementById('pageTitle').textContent = titles.parabola;
+  document.getElementById('lede').innerHTML = ledeTexts.parabola;
+  updateInstructionText('parabola');
+  updateOrientButtons('parabola');
+  updateParabola(); updateEllipse(); updateHyperbola();
+})();
+</script>
