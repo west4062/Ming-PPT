@@ -88,6 +88,13 @@ canvas { display: block; cursor: crosshair; width: 100%; border-radius: 4px; bac
 .slider-val { font-size: 13px; font-weight: 700; color: #111; min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
 .explain-box { background: #f0fdf4; border-radius: 7px; padding: 10px 13px; font-size: 12px; color: #166534; line-height: 1.85; }
 .explain-box .formula-line { display: block; font-weight: 700; font-size: 13px; margin-bottom: 4px; color: #14532d; }
+.frac {
+  display: inline-flex; flex-direction: column; align-items: center;
+  vertical-align: middle; font-size: 0.88em; margin: 0 1px;
+}
+.frac .num { border-bottom: 1px solid currentColor; padding: 0 2px; line-height: 1.3; }
+.frac .den { padding: 0 2px; line-height: 1.3; }
+.rad-inner { text-decoration: overline; }
 </style>
 </head>
 <body>
@@ -258,10 +265,10 @@ canvas { display: block; cursor: crosshair; width: 100%; border-radius: 4px; bac
           <tr><td>준선 <em>l</em></td><td id="pp-tv-dir">x = −2.00</td></tr>
         </table>
       </div>
-      <div class="explain-box">
+      <div class="explain-box" id="pp-explain-box">
         <span class="formula-line" id="pp-explain-eq">y² = 4px</span>
-        p &gt; 0 : 오른쪽으로 열림, F(p, 0)<br>
-        p &lt; 0 : 왼쪽으로 열림, F(p, 0)<br>
+        p &gt; 0 : 1, 4사분면에 그려짐, F(p, 0)<br>
+        p &lt; 0 : 2, 3사분면에 그려짐, F(p, 0)<br>
         준선 : x = −p<br>
         |p|가 클수록 포물선이 넓어집니다.
       </div>
@@ -274,7 +281,7 @@ canvas { display: block; cursor: crosshair; width: 100%; border-radius: 4px; bac
   <div class="tab-content-row">
     <div style="display:flex;flex-direction:column;flex:1;min-width:0;">
       <div class="canvas-wrap"><canvas id="canvas-ep" width="1000" height="700" style="cursor:default"></canvas></div>
-      <div class="desc">a, b 슬라이더를 조작해 보세요. a &gt; b이면 초점이 x축 위에, b &gt; a이면 y축 위에 놓이며, 초점 거리는 c = √|a²−b²|로 구합니다.</div>
+      <div class="desc">a, b 슬라이더를 조작해 보세요. a &gt; b이면 초점이 x축 위에, b &gt; a이면 y축 위에 놓이며, 초점 거리는 c = √<span class="rad-inner">|a²−b²|</span>로 구합니다.</div>
     </div>
     <div class="side-panel">
       <div class="slider-wrap">
@@ -295,7 +302,7 @@ canvas { display: block; cursor: crosshair; width: 100%; border-radius: 4px; bac
         <table class="values-table">
           <tr><td><span id="ep-lbl-a">장축</span><span class="val-sub" id="ep-sub-a">= 2a</span></td><td id="ep-tv-a">10.00</td></tr>
           <tr><td><span id="ep-lbl-b">단축</span><span class="val-sub" id="ep-sub-b">= 2b</span></td><td id="ep-tv-b">6.00</td></tr>
-          <tr><td id="ep-td-clabel">c = √(a²−b²)</td><td id="ep-tv-c">4.00</td></tr>
+          <tr><td id="ep-td-clabel">c = √<span class="rad-inner">a²−b²</span></td><td id="ep-tv-c">4.00</td></tr>
           <tr><td>F₁</td><td id="ep-tv-f1">(−4.00, 0)</td></tr>
           <tr><td>F₂</td><td id="ep-tv-f2">(4.00, 0)</td></tr>
         </table>
@@ -315,7 +322,7 @@ canvas { display: block; cursor: crosshair; width: 100%; border-radius: 4px; bac
   <div class="tab-content-row">
     <div style="display:flex;flex-direction:column;flex:1;min-width:0;">
       <div class="canvas-wrap"><canvas id="canvas-hp" width="1000" height="700" style="cursor:default"></canvas></div>
-      <div class="desc">a, b 슬라이더를 조작해 보세요. 초점 거리 c = √(a²+b²), 점근선의 기울기 b/a가 어떻게 변하는지 확인하세요.</div>
+      <div class="desc">a, b 슬라이더를 조작해 보세요. 초점 거리 c = √<span class="rad-inner">a²+b²</span>, 점근선의 기울기 <span class="frac"><span class="num">b</span><span class="den">a</span></span>가 어떻게 변하는지 확인하세요.</div>
     </div>
     <div class="side-panel">
       <div class="slider-wrap">
@@ -335,17 +342,17 @@ canvas { display: block; cursor: crosshair; width: 100%; border-radius: 4px; bac
         <table class="values-table">
           <tr><td>a<span class="val-sub">꼭짓점 거리</span></td><td id="hp-tv-a">2.00</td></tr>
           <tr><td>b</td><td id="hp-tv-b">3.00</td></tr>
-          <tr><td>c = √(a²+b²)</td><td id="hp-tv-c">3.61</td></tr>
+          <tr><td>c = √<span class="rad-inner">a²+b²</span></td><td id="hp-tv-c">3.61</td></tr>
           <tr><td>F₁</td><td id="hp-tv-f1">(−3.61, 0)</td></tr>
           <tr><td>F₂</td><td id="hp-tv-f2">(3.61, 0)</td></tr>
           <tr><td>점근선</td><td id="hp-tv-asym">y = ±1.50x</td></tr>
         </table>
       </div>
       <div class="explain-box">
-        <span class="formula-line">x²/a² − y²/b² = 1</span>
+        <span class="formula-line"><span class="frac"><span class="num">x²</span><span class="den">a²</span></span> − <span class="frac"><span class="num">y²</span><span class="den">b²</span></span> = 1</span>
         c² = a² + b²<br>
         초점 F₁(−c, 0), F₂(c, 0)<br>
-        점근선 : y = ± <span id="hp-asym-frac">b/a</span> · x<br>
+        점근선 : y = ± <span id="hp-asym-frac"><span class="frac"><span class="num">b</span><span class="den">a</span></span></span> · x<br>
         a = b이면 점근선 기울기 = ±1
       </div>
     </div>
@@ -1052,8 +1059,12 @@ function setPPMode(mode) {
   ppState.mode = mode;
   document.getElementById('pp-btn-x').classList.toggle('active', mode === 'x');
   document.getElementById('pp-btn-y').classList.toggle('active', mode === 'y');
-  const eq = mode === 'x' ? 'y² = 4px' : 'x² = 4py';
-  document.getElementById('pp-explain-eq').textContent = eq;
+  document.getElementById('pp-explain-eq').textContent = mode === 'x' ? 'y² = 4px' : 'x² = 4py';
+  document.getElementById('pp-explain-box').innerHTML =
+    `<span class="formula-line" id="pp-explain-eq">${mode === 'x' ? 'y² = 4px' : 'x² = 4py'}</span>` +
+    (mode === 'x'
+      ? 'p &gt; 0 : 1, 4사분면에 그려짐, F(p, 0)<br>p &lt; 0 : 2, 3사분면에 그려짐, F(p, 0)<br>준선 : x = −p<br>|p|가 클수록 포물선이 넓어집니다.'
+      : 'p &gt; 0 : 1, 2사분면에 그려짐, F(0, p)<br>p &lt; 0 : 3, 4사분면에 그려짐, F(0, p)<br>준선 : y = −p<br>|p|가 클수록 포물선이 넓어집니다.');
   ppDraw(); ppUpdatePanel();
 }
 
@@ -1204,7 +1215,7 @@ function epUpdatePanel() {
     document.getElementById('ep-sub-b').textContent = '= 2b';
     document.getElementById('ep-slbl-a').textContent = '장반축';
     document.getElementById('ep-slbl-b').textContent = '단반축';
-    document.getElementById('ep-td-clabel').textContent = 'c = √(a²−b²)';
+    document.getElementById('ep-td-clabel').innerHTML = 'c = √<span class="rad-inner">a²−b²</span>';
     document.getElementById('ep-tv-f1').textContent = `(−${c.toFixed(2)}, 0)`;
     document.getElementById('ep-tv-f2').textContent = `(${c.toFixed(2)}, 0)`;
     document.getElementById('ep-explain').innerHTML =
@@ -1216,7 +1227,7 @@ function epUpdatePanel() {
     document.getElementById('ep-sub-b').textContent = '= 2b';
     document.getElementById('ep-slbl-a').textContent = '단반축';
     document.getElementById('ep-slbl-b').textContent = '장반축';
-    document.getElementById('ep-td-clabel').textContent = 'c = √(b²−a²)';
+    document.getElementById('ep-td-clabel').innerHTML = 'c = √<span class="rad-inner">b²−a²</span>';
     document.getElementById('ep-tv-f1').textContent = `(0, −${c.toFixed(2)})`;
     document.getElementById('ep-tv-f2').textContent = `(0, ${c.toFixed(2)})`;
     document.getElementById('ep-explain').innerHTML =
@@ -1328,7 +1339,7 @@ function hpUpdatePanel() {
   document.getElementById('hp-tv-f1').textContent = `(−${c.toFixed(2)}, 0)`;
   document.getElementById('hp-tv-f2').textContent = `(${c.toFixed(2)}, 0)`;
   document.getElementById('hp-tv-asym').textContent = `y = ±${slope.toFixed(2)}x`;
-  document.getElementById('hp-asym-frac').textContent = `${b.toFixed(1)}/${a.toFixed(1)}`;
+  document.getElementById('hp-asym-frac').innerHTML = `<span class="frac"><span class="num">${b.toFixed(1)}</span><span class="den">${a.toFixed(1)}</span></span>`;
 }
 
 function hpDraw() {
