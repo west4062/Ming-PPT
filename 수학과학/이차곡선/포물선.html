@@ -95,7 +95,6 @@ canvas { display: block; cursor: crosshair; width: 100%; border-radius: 4px; bac
 <div class="breadcrumb">2022 개정 교과과정 · 기하 · 이차곡선</div>
 <h1 id="main-title">포물선의 정의</h1>
 <p class="subtitle" id="main-subtitle">한 직선 <em>l</em>(준선)과 한 점 <em>F</em>(초점)에 이르는 거리가 같은 점들의 집합</p>
-<a href="#" class="part-link">2부. 표준방정식과 파라미터 탐구로 이동 →</a>
 
 <div class="tabs">
   <button class="tab-btn active" onclick="switchTab('parabola')">포물선</button>
@@ -607,9 +606,19 @@ function pHitTest(pos) {
 
 function pHandleDrag(wx, wy) {
   if (pState.dragging === 'P') {
+    const prevP = {...pState.P};
     pState.P = pConstrain(wx, wy);
-    pState.trail.push({...pState.P});
-    if (pState.trail.length > 3000) pState.trail.shift();
+    // 이전 위치~현재 위치 사이를 곡선 위에서 보간
+    const p0 = pState.mode === 'x' ? prevP.y : prevP.x;
+    const p1 = pState.mode === 'x' ? pState.P.y : pState.P.x;
+    const steps = Math.max(1, Math.ceil(Math.abs(p1 - p0) / 0.04));
+    for (let i = 1; i <= steps; i++) {
+      const pv = p0 + (p1 - p0) * i / steps;
+      pState.trail.push(pState.mode === 'x'
+        ? { x: pv * pv / (4 * pState.p), y: pv }
+        : { x: pv, y: pv * pv / (4 * pState.p) });
+    }
+    while (pState.trail.length > 4000) pState.trail.shift();
   }
   pDraw(); pUpdatePanel();
 }
@@ -776,9 +785,23 @@ function eHitTest(pos) {
 
 function eHandleDrag(wx, wy) {
   if (eState.dragging === 'P') {
+    const { a, mode } = eState, b = eB();
+    const prevP = {...eState.P};
     eState.P = eConstrain(wx, wy);
-    eState.trail.push({...eState.P});
-    if (eState.trail.length > 3000) eState.trail.shift();
+    // 각도 파라미터로 보간
+    const theta0 = mode === 'x' ? Math.atan2(prevP.y / b, prevP.x / a) : Math.atan2(prevP.y / a, prevP.x / b);
+    const theta1 = mode === 'x' ? Math.atan2(eState.P.y / b, eState.P.x / a) : Math.atan2(eState.P.y / a, eState.P.x / b);
+    let dTheta = theta1 - theta0;
+    if (dTheta > Math.PI) dTheta -= 2 * Math.PI;
+    if (dTheta < -Math.PI) dTheta += 2 * Math.PI;
+    const steps = Math.max(1, Math.ceil(Math.abs(dTheta) / 0.02));
+    for (let i = 1; i <= steps; i++) {
+      const theta = theta0 + dTheta * i / steps;
+      eState.trail.push(mode === 'x'
+        ? { x: a * Math.cos(theta), y: b * Math.sin(theta) }
+        : { x: b * Math.cos(theta), y: a * Math.sin(theta) });
+    }
+    while (eState.trail.length > 4000) eState.trail.shift();
   }
   eDraw(); eUpdatePanel();
 }
@@ -956,14 +979,26 @@ function hHitTest(pos) {
 }
 
 function hHandleDrag(wx, wy) {
+  const b = hB(), { a, mode } = hState;
+  function interpHyp(trail, prevP, newP, sign) {
+    const p0 = mode === 'x' ? prevP.y : prevP.x;
+    const p1 = mode === 'x' ? newP.y : newP.x;
+    const steps = Math.max(1, Math.ceil(Math.abs(p1 - p0) / 0.04));
+    for (let i = 1; i <= steps; i++) {
+      const pv = p0 + (p1 - p0) * i / steps;
+      if (mode === 'x') trail.push({ x: sign * a * Math.sqrt(1 + (pv/b)*(pv/b)), y: pv });
+      else              trail.push({ x: pv, y: sign * a * Math.sqrt(1 + (pv/b)*(pv/b)) });
+    }
+    while (trail.length > 4000) trail.shift();
+  }
   if (hState.dragging === 'P1') {
+    const prevP = {...hState.P1};
     hState.P1 = hConstrainBranch(wx, wy, 1);
-    hState.trail1.push({...hState.P1});
-    if (hState.trail1.length > 3000) hState.trail1.shift();
+    interpHyp(hState.trail1, prevP, hState.P1, 1);
   } else if (hState.dragging === 'P2') {
+    const prevP = {...hState.P2};
     hState.P2 = hConstrainBranch(wx, wy, -1);
-    hState.trail2.push({...hState.P2});
-    if (hState.trail2.length > 3000) hState.trail2.shift();
+    interpHyp(hState.trail2, prevP, hState.P2, -1);
   }
   hDraw(); hUpdatePanel();
 }
@@ -1301,72 +1336,106 @@ function hpDraw() {
   const c = hpGetC(), slope = b / a;
   ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#f8f8f6'; ctx.fillRect(0, 0, W, H);
+
+  const zoom = 0.78;
+  // 화면 좌표 변환 (zoom 적용 후 실제 픽셀 위치)
+  const sw = (wx, wy) => {
+    const p = w2c(wx, wy);
+    return { x: CX + (p.x - CX) * zoom, y: CY + (p.y - CY) * zoom };
+  };
+
+  // ── 도형 (zoom 변환 안) ─────────────────────────────────────
+  ctx.save();
+  ctx.translate(CX, CY); ctx.scale(zoom, zoom); ctx.translate(-CX, -CY);
+
   drawGrid(ctx); drawAxes(ctx);
 
-  // Asymptotes — 회색 점선
-  ctx.save();
-  ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.8; ctx.setLineDash([6, 4]);
+  // 보조 사각형
   const ext = W / SCALE;
-  ctx.beginPath();
-  ctx.moveTo(w2c(-ext, -ext * slope).x, w2c(-ext, -ext * slope).y);
-  ctx.lineTo(w2c(ext, ext * slope).x, w2c(ext, ext * slope).y); ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(w2c(-ext, ext * slope).x, w2c(-ext, ext * slope).y);
-  ctx.lineTo(w2c(ext, -ext * slope).x, w2c(ext, -ext * slope).y); ctx.stroke();
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+  const rTR = w2c(a,b), rTL = w2c(-a,b), rBL = w2c(-a,-b), rBR = w2c(a,-b);
+  ctx.beginPath(); ctx.moveTo(rTR.x,rTR.y); ctx.lineTo(rTL.x,rTL.y);
+  ctx.lineTo(rBL.x,rBL.y); ctx.lineTo(rBR.x,rBR.y); ctx.closePath(); ctx.stroke();
   ctx.setLineDash([]);
-  // Asymptote label
-  ctx.fillStyle = '#555'; ctx.font = 'bold 22px system-ui';
-  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillText(`y = ±${slope.toFixed(2)}x`, 10, 52);
-  ctx.restore();
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  for (const [wx,wy] of [[a,b],[-a,b],[-a,-b],[a,-b]]) {
+    const pt = w2c(wx,wy);
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,4,0,Math.PI*2); ctx.fill();
+  }
 
-  // Hyperbola
-  ctx.save();
+  // 점근선
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.8; ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(w2c(-ext,-ext*slope).x,w2c(-ext,-ext*slope).y);
+  ctx.lineTo(w2c(ext,ext*slope).x,w2c(ext,ext*slope).y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(w2c(-ext,ext*slope).x,w2c(-ext,ext*slope).y);
+  ctx.lineTo(w2c(ext,-ext*slope).x,w2c(ext,-ext*slope).y); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 쌍곡선 곡선
   ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5;
-  for (const sign of [1, -1]) {
+  for (const sign of [1,-1]) {
     ctx.beginPath(); let first = true;
     for (let i = 0; i <= 300; i++) {
-      const t = -3.2 + 6.4 * i / 300;
-      const wx = sign * a * Math.cosh(t), wy = b * Math.sinh(t);
-      const pt = w2c(wx, wy);
-      if (pt.x < -30 || pt.x > W + 30 || pt.y < -30 || pt.y > H + 30) { first = true; continue; }
-      if (first) { ctx.moveTo(pt.x, pt.y); first = false; } else ctx.lineTo(pt.x, pt.y);
+      const t = -3.2 + 6.4*i/300;
+      const pt = w2c(sign*a*Math.cosh(t), b*Math.sinh(t));
+      if (pt.x<-30||pt.x>W+30||pt.y<-30||pt.y>H+30){first=true;continue;}
+      if(first){ctx.moveTo(pt.x,pt.y);first=false;}else ctx.lineTo(pt.x,pt.y);
     }
     ctx.stroke();
   }
-  ctx.restore();
 
-  // Vertices at (±a, 0)
-  drawDot(ctx, a, 0, 5, '#111');
-  drawDot(ctx, -a, 0, 5, '#111');
-
-  // 원점→꼭짓점 보조선
-  ctx.save();
-  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
-  ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(w2c(a, 0).x, CY); ctx.stroke();
+  // 꼭짓점 보조선 + 점
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1.2; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(CX,CY); ctx.lineTo(w2c(a,0).x,CY); ctx.stroke();
   ctx.setLineDash([]);
+  ctx.fillStyle = '#111';
+  for (const [wx,wy,r] of [[a,0,5],[-a,0,5],[-c,0,7],[c,0,7]]) {
+    const pt = w2c(wx,wy);
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,r,0,Math.PI*2); ctx.fill();
+  }
 
-  // 꼭짓점 좌표 레이블 — 축 아래
+  ctx.restore(); // zoom 변환 끝
+
+  // ── 텍스트 레이블 (원본 크기, sw() 좌표 사용) ────────────────
+
+  // 사각형 꼭짓점 좌표
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.font = '19px system-ui';
+  const rectPts = [
+    { wx:a,  wy:b,  label:`(${a.toFixed(1)}, ${b.toFixed(1)})`,        ax:'left',  ay:'bottom' },
+    { wx:-a, wy:b,  label:`(${(-a).toFixed(1)}, ${b.toFixed(1)})`,     ax:'right', ay:'bottom' },
+    { wx:-a, wy:-b, label:`(${(-a).toFixed(1)}, ${(-b).toFixed(1)})`,  ax:'right', ay:'top' },
+    { wx:a,  wy:-b, label:`(${a.toFixed(1)}, ${(-b).toFixed(1)})`,     ax:'left',  ay:'top' },
+  ];
+  for (const { wx, wy, label, ax, ay } of rectPts) {
+    const pt = sw(wx, wy);
+    ctx.textAlign = ax; ctx.textBaseline = ay === 'bottom' ? 'bottom' : 'top';
+    ctx.fillText(label, pt.x + (ax==='left'?7:-7), pt.y + (ay==='bottom'?-5:5));
+  }
+
+  // 꼭짓점 좌표 (축 아래)
   ctx.fillStyle = '#111'; ctx.font = 'bold 22px system-ui';
   ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  ctx.fillText(`(${a.toFixed(1)}, 0)`, w2c(a, 0).x, CY + 12);
-  ctx.fillText(`(${(-a).toFixed(1)}, 0)`, w2c(-a, 0).x, CY + 12);
-  ctx.restore();
+  const vR = sw(a,0), vL = sw(-a,0);
+  ctx.fillText(`(${a.toFixed(1)}, 0)`, vR.x, vR.y + 12);
+  ctx.fillText(`(${(-a).toFixed(1)}, 0)`, vL.x, vL.y + 12);
 
-  // Foci — 검정, 레이블 안쪽(중심 방향) 위에 표시
-  drawDot(ctx, -c, 0, 7, '#111');
-  drawDot(ctx, c, 0, 7, '#111');
-  const f1c = w2c(-c, 0), f2c = w2c(c, 0);
-  ctx.save();
-  ctx.fillStyle = '#111'; ctx.font = 'bold 23px system-ui'; ctx.textBaseline = 'bottom';
+  // 초점 좌표 (안쪽, 위)
+  ctx.font = 'bold 23px system-ui'; ctx.textBaseline = 'bottom';
+  const f1s = sw(-c,0), f2s = sw(c,0);
   ctx.textAlign = 'left';
-  ctx.fillText(`F₁(−${c.toFixed(1)}, 0)`, f1c.x + 6, f1c.y - 6);
+  ctx.fillText(`F₁(−${c.toFixed(1)}, 0)`, f1s.x + 6, f1s.y - 6);
   ctx.textAlign = 'right';
-  ctx.fillText(`F₂(${c.toFixed(1)}, 0)`, f2c.x - 6, f2c.y - 6);
+  ctx.fillText(`F₂(${c.toFixed(1)}, 0)`, f2s.x - 6, f2s.y - 6);
+
+  // 점근선 방정식 — 우하단 (방정식과 겹침 방지)
+  ctx.fillStyle = '#555'; ctx.font = 'bold 22px system-ui';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillText(`y = ±${slope.toFixed(2)}x`, W - 10, H - 10);
   ctx.restore();
 
-  // Equation
-  const a2 = (a * a).toFixed(1), b2 = (b * b).toFixed(1);
+  // 방정식 — 좌상단
+  const a2 = (a*a).toFixed(1), b2 = (b*b).toFixed(1);
   drawFracEq(ctx, 'x²', a2, '−', 'y²', b2, 10, 10, 'rgba(79,82,221,0.9)');
 }
 
