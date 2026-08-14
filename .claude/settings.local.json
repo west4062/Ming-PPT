@@ -4,7 +4,8 @@
       "WebFetch(domain:claude.ai)",
       "WebFetch(domain:847d89cc-9d63-4cfc-9d85-f255260eb31c.frame.claudeusercontent.com)",
       "Bash(start:*)",
-      "Bash(cmd.exe:*)"
+      "Bash(cmd.exe:*)",
+      "PowerShell(Get-Process *)"
     ]
   }
 }
