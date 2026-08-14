@@ -537,34 +537,6 @@ function getOrderData(){
   };
 }
 
-function buildTxt(data){
-  var lines = [];
-  lines.push('═══════════════════════════');
-  lines.push('  음료 주문서 - 기전여고');
-  lines.push('  작성일시: ' + new Date().toLocaleString('ko-KR'));
-  lines.push('═══════════════════════════');
-  lines.push('');
-  lines.push('이름: ' + data.name);
-  lines.push('');
-  lines.push('【 주문내역 】');
-  lines.push(data.items);
-  lines.push('');
-  lines.push('합계: ' + data.total);
-  if (data.note) { lines.push(''); lines.push('요청사항: ' + data.note); }
-  return lines.join('\n');
-}
-
-function downloadTxt(data){
-  var blob = new Blob([buildTxt(data)], { type: 'text/plain;charset=utf-8' });
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = '음료주문_' + (data.name || '이름없음') + '_' + new Date().toLocaleDateString('ko-KR') + '.txt';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-}
-
 function getScriptUrl(){
   return localStorage.getItem(URL_KEY) || DEFAULT_URL;
 }
@@ -591,10 +563,12 @@ document.getElementById('btnSubmit').addEventListener('click', function(){
     showToast('음료를 하나 이상 담아주세요.', 'error');
     return;
   }
-  downloadTxt(data);
+  if (!getScriptUrl()) {
+    showToast('주문 시스템이 아직 연결되지 않았습니다. 선생님께 문의해 주세요.', 'error', 5000);
+    return;
+  }
   sendToSheet(data);
-  var url = getScriptUrl();
-  showToast(url ? '주문 완료! TXT 저장 + 시트 전송됨' : '주문 완료! (시트 미연동: TXT만 저장됨)', 'success', 4000);
+  showToast('주문 완료!', 'success', 4000);
 
   state.cart = [];
   document.getElementById('custNote').value = '';
