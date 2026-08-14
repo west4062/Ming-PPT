@@ -5,7 +5,8 @@
       "WebFetch(domain:847d89cc-9d63-4cfc-9d85-f255260eb31c.frame.claudeusercontent.com)",
       "Bash(start:*)",
       "Bash(cmd.exe:*)",
-      "PowerShell(Get-Process *)"
+      "PowerShell(Get-Process *)",
+      "WebFetch(domain:api.github.com)"
     ]
   }
 }
