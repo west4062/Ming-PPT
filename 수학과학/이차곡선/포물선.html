@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>정의로 곡선을 찾다 — 이차곡선</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Pretendard', 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f9f9f7;
+  color: #111;
+  padding: 36px 32px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.breadcrumb { font-size: 12px; color: #999; margin-bottom: 14px; letter-spacing: 0.02em; }
+
+h1 { font-size: 30px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.5px; }
+
+.subtitle { font-size: 27px; color: #555; margin-bottom: 14px; }
+
+.part-link { display: inline-block; font-size: 13px; color: #2563eb; text-decoration: none; margin-bottom: 28px; }
+.part-link:hover { text-decoration: underline; }
+
+.tabs { display: flex; flex-wrap: wrap; border-bottom: 1.5px solid #e4e4e0; gap: 0; }
+
+.tab-btn {
+  padding: 8px 14px; font-size: 13px; font-weight: 500;
+  border: 1.5px solid transparent; border-bottom: none;
+  background: transparent; color: #999; cursor: pointer;
+  border-radius: 6px 6px 0 0; margin-bottom: -1.5px; transition: color 0.15s;
+}
+.tab-sep { width: 1px; background: #e4e4e0; margin: 6px 4px 0; }
+.tab-btn:hover { color: #333; }
+.tab-btn.active { background: #fff; border-color: #e4e4e0; color: #111; font-weight: 600; }
+
+.tab-panel { display: none; background: #fff; border: 1.5px solid #e4e4e0; border-top: none; border-radius: 0 0 10px 10px; }
+.tab-panel.active { display: flex; flex-direction: column; }
+
+.tab-content-row { display: flex; flex: 1; }
+
+.canvas-wrap { flex: 1; padding: 16px 16px 12px 16px; border-right: 1.5px solid #e4e4e0; min-width: 0; }
+
+canvas { display: block; cursor: crosshair; width: 100%; border-radius: 4px; background: #f8f8f6; }
+
+.desc { padding: 12px 16px 16px; font-size: 12.5px; color: #666; line-height: 1.7; border-top: 1px solid #f0f0ec; }
+
+.side-panel { width: 252px; flex-shrink: 0; padding: 18px 16px; display: flex; flex-direction: column; gap: 16px; }
+
+.panel-label { font-size: 11.5px; color: #999; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 7px; }
+
+.focus-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+.focus-btn {
+  padding: 8px 6px; font-size: 13px; font-weight: 500;
+  border: 1.5px solid #ddd; border-radius: 7px; background: #fff;
+  color: #666; cursor: pointer; text-align: center; transition: all 0.15s; white-space: nowrap;
+}
+.focus-btn:hover { background: #f5f5f3; }
+.focus-btn.active { background: #111; border-color: #111; color: #fff; }
+
+.values-table { width: 100%; border-collapse: collapse; }
+.values-table tr { border-bottom: 1px solid #f0f0ec; }
+.values-table td { padding: 7px 2px; font-size: 13px; vertical-align: middle; }
+.values-table td:first-child { color: #666; line-height: 1.4; }
+.values-table td:last-child { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; min-width: 48px; color: #111; }
+.val-sub { display: block; font-size: 10.5px; color: #bbb; margin-top: 1px; }
+.val-formula { text-align: center; padding: 9px 2px; font-size: 14px; font-weight: 700; color: #111; letter-spacing: 0.03em; }
+
+.info-box { background: #eff6ff; border-radius: 7px; padding: 10px 13px; font-size: 12.5px; color: #1d4ed8; line-height: 1.65; }
+
+.action-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.action-btn { padding: 8px 4px; font-size: 12.5px; border: 1.5px solid #ddd; border-radius: 7px; background: #fff; color: #333; cursor: pointer; text-align: center; transition: background 0.15s; }
+.action-btn:hover { background: #f5f5f3; }
+
+.checkbox-row { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #444; cursor: pointer; }
+.checkbox-row input[type="checkbox"] { cursor: pointer; width: 14px; height: 14px; }
+
+.range-text { font-size: 11.5px; color: #aaa; font-variant-numeric: tabular-nums; }
+
+.slider-wrap { display: flex; flex-direction: column; gap: 8px; }
+.slider-row { display: flex; align-items: center; gap: 8px; }
+.slider-row label { font-size: 13px; color: #555; font-weight: 700; min-width: 20px; }
+.slider-row input[type="range"] { flex: 1; accent-color: #6366f1; cursor: pointer; }
+.slider-val { font-size: 13px; font-weight: 700; color: #111; min-width: 40px; text-align: right; font-variant-numeric: tabular-nums; }
+.explain-box { background: #f0fdf4; border-radius: 7px; padding: 10px 13px; font-size: 12px; color: #166534; line-height: 1.85; }
+.explain-box .formula-line { display: block; font-weight: 700; font-size: 13px; margin-bottom: 4px; color: #14532d; }
+.frac {
+  display: inline-flex; flex-direction: column; align-items: center;
+  vertical-align: middle; font-size: 0.88em; margin: 0 1px;
+}
+.frac .num { border-bottom: 1px solid currentColor; padding: 0 2px; line-height: 1.3; }
+.frac .den { padding: 0 2px; line-height: 1.3; }
+.rad-inner { text-decoration: overline; }
+</style>
+</head>
+<body>
+
+<div class="breadcrumb">2022 개정 교과과정 · 기하 · 이차곡선</div>
+<h1 id="main-title">포물선의 정의</h1>
+<p class="subtitle" id="main-subtitle">한 직선 <em>l</em>(준선)과 한 점 <em>F</em>(초점)에 이르는 거리가 같은 점들의 집합</p>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('parabola')">포물선</button>
+  <button class="tab-btn" onclick="switchTab('parabola-prop')">포물선의 성질</button>
+  <div class="tab-sep"></div>
+  <button class="tab-btn" onclick="switchTab('ellipse')">타원</button>
+  <button class="tab-btn" onclick="switchTab('ellipse-prop')">타원의 성질</button>
+  <div class="tab-sep"></div>
+  <button class="tab-btn" onclick="switchTab('hyperbola')">쌍곡선</button>
+  <button class="tab-btn" onclick="switchTab('hyperbola-prop')">쌍곡선의 성질</button>
+</div>
+
+<!-- ===== 포물선 탭 ===== -->
+<div class="tab-panel active" id="tab-parabola">
+  <div class="tab-content-row">
+    <div style="display:flex;flex-direction:column;flex:1;min-width:0;">
+      <div class="canvas-wrap"><canvas id="canvas-p" width="1000" height="700"></canvas></div>
+      <div class="desc">점 P를 위아래로 드래그해 보세요. P는 초점과 준선까지의 거리를 항상 같게 유지한 채로만 움직이며, 지나간 자리마다 포물선이 그려집니다. (p = 2 고정)</div>
+    </div>
+    <div class="side-panel">
+      <div>
+        <div class="panel-label">초점 위치</div>
+        <div class="focus-btns">
+          <button class="focus-btn active" id="p-btn-x" onclick="setParabolaMode('x')">F(p, 0) · x축</button>
+          <button class="focus-btn" id="p-btn-y" onclick="setParabolaMode('y')">F(0, p) · y축</button>
+        </div>
+      </div>
+      <div>
+        <table class="values-table">
+          <tr><td>p<span class="val-sub">초점 거리</span></td><td id="p-val-p">2.00</td></tr>
+          <tr><td>|PF|<span class="val-sub">초점까지</span></td><td id="p-val-pf">2.00</td></tr>
+          <tr><td>점 P부터 준선 <em>l</em>까지의 거리</td><td id="p-val-dl">2.00</td></tr>
+          <tr><td colspan="2" class="val-formula">|PF| = 점 P부터 준선 <em>l</em>까지의 거리</td></tr>
+        </table>
+      </div>
+      <div class="info-box">P는 두 거리를 항상 같게 유지한 채로만 움직입니다.</div>
+      <div class="action-btns">
+        <button class="action-btn" onclick="pClearTrail()">자취 지우기</button>
+        <button class="action-btn" onclick="pResetP()">점 위치 초기화</button>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="p-show-answer" onchange="pToggleAnswer()">
+        정답 곡선 + 방정식 보기
+      </label>
+      <div class="range-text" id="p-range-text">그려진 범위: y ∈ [0.00, 0.00]</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 타원 탭 ===== -->
+<div class="tab-panel" id="tab-ellipse">
+  <div class="tab-content-row">
+    <div style="display:flex;flex-direction:column;flex:1;min-width:0;">
+      <div class="canvas-wrap"><canvas id="canvas-e" width="1000" height="700"></canvas></div>
+      <div class="desc">점 P를 드래그해 보세요. P는 두 초점까지의 거리의 합이 항상 같게 유지한 채로만 움직이며, 지나간 자리마다 타원이 그려집니다. (초점 거리 c = 4 고정)</div>
+    </div>
+    <div class="side-panel">
+      <div>
+        <div class="panel-label">초점 위치</div>
+        <div class="focus-btns">
+          <button class="focus-btn active" id="e-btn-x" onclick="setEllipseMode('x')">F(±c, 0) · x축</button>
+          <button class="focus-btn" id="e-btn-y" onclick="setEllipseMode('y')">F(0, ±c) · y축</button>
+        </div>
+      </div>
+      <div>
+        <table class="values-table">
+          <tr><td>장축<span class="val-sub">= 2a</span></td><td id="e-val-a">10.00</td></tr>
+          <tr><td>단축<span class="val-sub">= 2b</span></td><td id="e-val-b">6.00</td></tr>
+          <tr><td>c<span class="val-sub">초점 거리</span></td><td id="e-val-c">4.00</td></tr>
+          <tr><td>|PF₁|<span class="val-sub">초점 F₁까지</span></td><td id="e-val-pf1">9.00</td></tr>
+          <tr><td>|PF₂|<span class="val-sub">초점 F₂까지</span></td><td id="e-val-pf2">1.00</td></tr>
+          <tr><td>|PF₁| + |PF₂|</td><td id="e-val-sum">10.00</td></tr>
+          <tr><td colspan="2" class="val-formula">|PF₁| + |PF₂| = 2a</td></tr>
+        </table>
+      </div>
+      <div class="info-box">P는 두 초점까지 거리의 합이 항상 2a = <strong>10</strong>으로 유지됩니다.</div>
+      <div class="action-btns">
+        <button class="action-btn" onclick="eClearTrail()">자취 지우기</button>
+        <button class="action-btn" onclick="eResetP()">점 위치 초기화</button>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="e-show-answer" onchange="eToggleAnswer()">
+        정답 곡선 + 방정식 보기
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 쌍곡선 탭 ===== -->
+<div class="tab-panel" id="tab-hyperbola">
+  <div class="tab-content-row">
+    <div style="display:flex;flex-direction:column;flex:1;min-width:0;">
+      <div class="canvas-wrap"><canvas id="canvas-h" width="1000" height="700"></canvas></div>
+      <div class="desc">P₁, P₂를 각각 드래그해 보세요. 두 점 모두 두 초점까지 거리의 차의 절댓값이 항상 2a로 유지된 채로만 움직이며, 지나간 자리마다 쌍곡선이 그려집니다. (c = 4, a = 2)</div>
+    </div>
+    <div class="side-panel">
+      <div>
+        <div class="panel-label">초점 위치</div>
+        <div class="focus-btns">
+          <button class="focus-btn active" id="h-btn-x" onclick="setHyperbolaMode('x')">F(±c, 0) · x축</button>
+          <button class="focus-btn" id="h-btn-y" onclick="setHyperbolaMode('y')">F(0, ±c) · y축</button>
+        </div>
+      </div>
+      <div>
+        <table class="values-table">
+          <tr><td>a<span class="val-sub">꼭짓점 거리</span></td><td id="h-val-a">2.00</td></tr>
+          <tr><td>b</td><td id="h-val-b">3.46</td></tr>
+          <tr><td>c<span class="val-sub">초점 거리</span></td><td id="h-val-c">4.00</td></tr>
+          <tr><td colspan="2" style="font-size:11px;color:#888;background:#f5f5f3;padding:4px 6px;">P₁ 오른쪽/위 가지</td></tr>
+          <tr><td>|P₁F₁|</td><td id="h-val-p1f1">6.00</td></tr>
+          <tr><td>|P₁F₂|</td><td id="h-val-p1f2">2.00</td></tr>
+          <tr><td>||P₁F₁|−|P₁F₂||</td><td id="h-val-p1diff">4.00</td></tr>
+          <tr><td colspan="2" style="font-size:11px;color:#888;background:#f5f5f3;padding:4px 6px;">P₂ 왼쪽/아래 가지</td></tr>
+          <tr><td>|P₂F₁|</td><td id="h-val-p2f1">2.00</td></tr>
+          <tr><td>|P₂F₂|</td><td id="h-val-p2f2">6.00</td></tr>
+          <tr><td>||P₂F₁|−|P₂F₂||</td><td id="h-val-p2diff">4.00</td></tr>
+          <tr><td colspan="2" class="val-formula">| |PF₁| − |PF₂| | = 2a</td></tr>
+        </table>
+      </div>
+      <div class="info-box">두 초점까지의 거리의 차 = 2a = <strong>4</strong></div>
+      <div class="action-btns">
+        <button class="action-btn" onclick="hClearTrail()">자취 지우기</button>
+        <button class="action-btn" onclick="hResetP()">점 위치 초기화</button>
+      </div>
+      <label class="checkbox-row">
+        <input type="checkbox" id="h-show-answer" onchange="hToggleAnswer()">
+        정답 곡선 + 방정식 보기
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 포물선의 성질 탭 ===== -->
+<div class="tab-panel" id="tab-parabola-prop">
+  <div class="tab-content-row">
+    <div style="display:flex;flex-direction:column;flex:1;min-width:0;">
+      <div class="canvas-wrap"><canvas id="canvas-pp" width="1000" height="700" style="cursor:default"></canvas></div>
+      <div class="desc">슬라이더로 p 값을 바꿔가며 포물선의 모양 변화를 관찰해 보세요. p &gt; 0이면 오른쪽(또는 위), p &lt; 0이면 반대 방향으로 열립니다.</div>
+    </div>
+    <div class="side-panel">
+      <div>
+        <div class="panel-label">방정식 형태</div>
+        <div class="focus-btns">
+          <button class="focus-btn active" id="pp-btn-x" onclick="setPPMode('x')">y² = 4px</button>
+          <button class="focus-btn" id="pp-btn-y" onclick="setPPMode('y')">x² = 4py</button>
+        </div>
+      </div>
+      <div class="slider-wrap">
+        <div class="panel-label">파라미터</div>
+        <div class="slider-row">
+          <label>p</label>
+          <input type="range" id="pp-slider-p" min="-5" max="5" step="0.1" value="2" oninput="ppOnSlide()">
+          <span class="slider-val" id="pp-sv-p">2.0</span>
+        </div>
+      </div>
+      <div>
+        <table class="values-table">
+          <tr><td>p</td><td id="pp-tv-p">2.00</td></tr>
+          <tr><td>4p<span class="val-sub">방정식 계수</span></td><td id="pp-tv-4p">8.00</td></tr>
+          <tr><td>초점 F</td><td id="pp-tv-focus">(2.00, 0)</td></tr>
+          <tr><td>준선 <em>l</em></td><td id="pp-tv-dir">x = −2.00</td></tr>
+        </table>
+      </div>
+      <div class="explain-box" id="pp-explain-box">
+        <span class="formula-line" id="pp-explain-eq">y² = 4px</span>
+        p &gt; 0 : 1, 4사분면에 그려짐, F(p, 0)<br>
+        p &lt; 0 : 2, 3사분면에 그려짐, F(p, 0)<br>
+        준선 : x = −p<br>
+        |p|가 클수록 포물선이 넓어집니다.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 타원의 성질 탭 ===== -->
+<div class="tab-panel" id="tab-ellipse-prop">
+  <div class="tab-content-row">
+    <div style="display:flex;flex-direction:column;flex:1;min-width:0;">
+      <div class="canvas-wrap"><canvas id="canvas-ep" width="1000" height="700" style="cursor:default"></canvas></div>
+      <div class="desc">a, b 슬라이더를 조작해 보세요. a &gt; b이면 초점이 x축 위에, b &gt; a이면 y축 위에 놓이며, 초점 거리는 c = √<span class="rad-inner">|a²−b²|</span>로 구합니다.</div>
+    </div>
+    <div class="side-panel">
+      <div class="slider-wrap">
+        <div class="panel-label">파라미터</div>
+        <div class="slider-row">
+          <label>a<span class="val-sub" id="ep-slbl-a">장반축</span></label>
+          <input type="range" id="ep-slider-a" min="1" max="8" step="0.1" value="5" oninput="epOnSlide()">
+          <span class="slider-val" id="ep-sv-a">5.0</span>
+        </div>
+        <div class="slider-row">
+          <label>b<span class="val-sub" id="ep-slbl-b">단반축</span></label>
+
+          <input type="range" id="ep-slider-b" min="1" max="8" step="0.1" value="3" oninput="epOnSlide()">
+          <span class="slider-val" id="ep-sv-b">3.0</span>
+        </div>
+      </div>
+      <div>
+        <table class="values-table">
+          <tr><td><span id="ep-lbl-a">장축</span><span class="val-sub" id="ep-sub-a">= 2a</span></td><td id="ep-tv-a">10.00</td></tr>
+          <tr><td><span id="ep-lbl-b">단축</span><span class="val-sub" id="ep-sub-b">= 2b</span></td><td id="ep-tv-b">6.00</td></tr>
+          <tr><td id="ep-td-clabel">c = √<span class="rad-inner">a²−b²</span></td><td id="ep-tv-c">4.00</td></tr>
+          <tr><td>F₁</td><td id="ep-tv-f1">(−4.00, 0)</td></tr>
+          <tr><td>F₂</td><td id="ep-tv-f2">(4.00, 0)</td></tr>
+        </table>
+      </div>
+      <div class="explain-box" id="ep-explain">
+        <span class="formula-line">a &gt; b일 때</span>
+        c² = a² − b²<br>
+        초점 F₁(−c, 0), F₂(c, 0)<br>
+        초점은 x축(장축) 위에 있습니다.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 쌍곡선의 성질 탭 ===== -->
+<div class="tab-panel" id="tab-hyperbola-prop">
+  <div class="tab-content-row">
+    <div style="display:flex;flex-direction:column;flex:1;min-width:0;">
+      <div class="canvas-wrap"><canvas id="canvas-hp" width="1000" height="700" style="cursor:default"></canvas></div>
+      <div class="desc">a, b 슬라이더를 조작해 보세요. 초점 거리 c = √<span class="rad-inner">a²+b²</span>, 점근선의 기울기 <span class="frac"><span class="num">b</span><span class="den">a</span></span>가 어떻게 변하는지 확인하세요.</div>
+    </div>
+    <div class="side-panel">
+      <div class="slider-wrap">
+        <div class="panel-label">파라미터</div>
+        <div class="slider-row">
+          <label>a</label>
+          <input type="range" id="hp-slider-a" min="0.5" max="6" step="0.1" value="2" oninput="hpOnSlide()">
+          <span class="slider-val" id="hp-sv-a">2.0</span>
+        </div>
+        <div class="slider-row">
+          <label>b</label>
+          <input type="range" id="hp-slider-b" min="0.5" max="6" step="0.1" value="3" oninput="hpOnSlide()">
+          <span class="slider-val" id="hp-sv-b">3.0</span>
+        </div>
+      </div>
+      <div>
+        <table class="values-table">
+          <tr><td>a<span class="val-sub">꼭짓점 거리</span></td><td id="hp-tv-a">2.00</td></tr>
+          <tr><td>b</td><td id="hp-tv-b">3.00</td></tr>
+          <tr><td>c = √<span class="rad-inner">a²+b²</span></td><td id="hp-tv-c">3.61</td></tr>
+          <tr><td>F₁</td><td id="hp-tv-f1">(−3.61, 0)</td></tr>
+          <tr><td>F₂</td><td id="hp-tv-f2">(3.61, 0)</td></tr>
+          <tr><td>점근선</td><td id="hp-tv-asym">y = ±1.50x</td></tr>
+        </table>
+      </div>
+      <div class="explain-box">
+        <span class="formula-line"><span class="frac"><span class="num">x²</span><span class="den">a²</span></span> − <span class="frac"><span class="num">y²</span><span class="den">b²</span></span> = 1</span>
+        c² = a² + b²<br>
+        초점 F₁(−c, 0), F₂(c, 0)<br>
+        점근선 : y = ± <span id="hp-asym-frac"><span class="frac"><span class="num">b</span><span class="den">a</span></span></span> · x<br>
+        a = b이면 점근선 기울기 = ±1
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  SHARED COORDINATE SYSTEM
+// ============================================================
+const W = 1000, H = 700, SCALE = 60;
+const CX = W / 2, CY = H / 2;
+
+function w2c(wx, wy) { return { x: CX + wx * SCALE, y: CY - wy * SCALE }; }
+function c2w(cx, cy) { return { x: (cx - CX) / SCALE, y: (CY - cy) / SCALE }; }
+
+function getPos(canvas, e) {
+  const rect = canvas.getBoundingClientRect();
+  const sx = canvas.width / rect.width, sy = canvas.height / rect.height;
+  const src = e.touches ? e.touches[0] : e;
+  return { x: (src.clientX - rect.left) * sx, y: (src.clientY - rect.top) * sy };
+}
+
+// ============================================================
+//  SHARED DRAWING HELPERS
+// ============================================================
+function drawGrid(ctx) {
+  ctx.save();
+  ctx.strokeStyle = '#e8e8e4';
+  ctx.lineWidth = 0.8;
+  for (let x = -8; x <= 8; x++) {
+    if (x === 0) continue;
+    const cx = w2c(x, 0).x;
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+  }
+  for (let y = -6; y <= 6; y++) {
+    if (y === 0) continue;
+    const cy = w2c(0, y).y;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawAxes(ctx) {
+  ctx.save();
+  ctx.strokeStyle = '#c0c0bc'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(0, CY); ctx.lineTo(W, CY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CX, 0); ctx.lineTo(CX, H); ctx.stroke();
+
+  ctx.fillStyle = '#bbb';
+  ctx.font = '27px system-ui';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  for (let x = -8; x <= 8; x += 2) {
+    if (x === 0) continue;
+    const cx = w2c(x, 0).x;
+    if (cx < 8 || cx > W - 8) continue;
+    ctx.fillText(x, cx, CY + 5);
+  }
+  ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+  for (let y = -6; y <= 6; y += 2) {
+    if (y === 0) continue;
+    const cy = w2c(0, y).y;
+    if (cy < 8 || cy > H - 8) continue;
+    ctx.fillText(y, CX - 6, cy);
+  }
+  ctx.restore();
+}
+
+function drawDot(ctx, wx, wy, r, fill, stroke) {
+  const c = w2c(wx, wy);
+  ctx.save();
+  ctx.fillStyle = fill || '#111';
+  ctx.strokeStyle = stroke || fill || '#111';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.fill();
+  if (stroke) ctx.stroke();
+  ctx.restore();
+}
+
+function drawSegment(ctx, ax, ay, bx, by, color, dash) {
+  const ca = w2c(ax, ay), cb = w2c(bx, by);
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.8;
+  if (dash) ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(ca.x, ca.y); ctx.lineTo(cb.x, cb.y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawLabel(ctx, text, wx, wy, color, offsetX, offsetY, bold) {
+  const c = w2c(wx, wy);
+  ctx.save();
+  ctx.fillStyle = color || '#333';
+  ctx.font = (bold ? 'bold ' : '') + '27px system-ui';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, c.x + (offsetX || 8), c.y + (offsetY || 0));
+  ctx.restore();
+}
+
+function drawMidLabel(ctx, ax, ay, bx, by, text, color) {
+  const mx = (ax + bx) / 2, my = (ay + by) / 2;
+  const cm = w2c(mx, my);
+  const ang = Math.atan2(w2c(bx, by).y - w2c(ax, ay).y, w2c(bx, by).x - w2c(ax, ay).x);
+  ctx.save();
+  ctx.fillStyle = color || '#333';
+  ctx.font = 'bold 27px system-ui';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, cm.x - Math.sin(ang) * 18, cm.y + Math.cos(ang) * 18);
+  ctx.restore();
+}
+
+function drawTrail(ctx, trail) {
+  if (trail.length < 2) return;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(239,68,68,0.55)'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < trail.length; i++) {
+    const c = w2c(trail[i].x, trail[i].y);
+    if (i === 0) ctx.moveTo(c.x, c.y); else ctx.lineTo(c.x, c.y);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+// ============================================================
+//  PARABOLA
+// ============================================================
+const pCanvas = document.getElementById('canvas-p');
+const pCtx = pCanvas.getContext('2d');
+
+const pState = {
+  mode: 'x', p: 2, P: { x: 0, y: 0 },
+  trail: [], showAnswer: false, dragging: null,
+};
+
+function pConstrain(wx, wy) {
+  return pState.mode === 'x'
+    ? { x: (wy * wy) / (4 * pState.p), y: wy }
+    : { x: wx, y: (wx * wx) / (4 * pState.p) };
+}
+function pFocus() { return pState.mode === 'x' ? { x: pState.p, y: 0 } : { x: 0, y: pState.p }; }
+function pDirFoot() {
+  return pState.mode === 'x'
+    ? { x: -pState.p, y: pState.P.y }
+    : { x: pState.P.x, y: -pState.p };
+}
+function pDistPF() { const F = pFocus(); return Math.hypot(pState.P.x - F.x, pState.P.y - F.y); }
+function pDistPL() {
+  return pState.mode === 'x'
+    ? Math.abs(pState.P.x + pState.p)
+    : Math.abs(pState.P.y + pState.p);
+}
+
+function pDraw() {
+  const ctx = pCtx;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8f8f6'; ctx.fillRect(0, 0, W, H);
+  drawGrid(ctx); drawAxes(ctx);
+
+  // Directrix
+  ctx.save();
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+  if (pState.mode === 'x') {
+    const cx = w2c(-pState.p, 0).x;
+    ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#888'; ctx.font = '27px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.fillText('준선 l', cx, 5);
+  } else {
+    const cy = w2c(0, -pState.p).y;
+    ctx.beginPath(); ctx.moveTo(0, cy); ctx.lineTo(W, cy); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#888'; ctx.font = '27px system-ui'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.fillText('준선 l', W - 6, cy - 14);
+  }
+  ctx.restore();
+
+  // Answer curve
+  if (pState.showAnswer) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(99,102,241,0.65)'; ctx.lineWidth = 2;
+    ctx.beginPath(); let first = true;
+    if (pState.mode === 'x') {
+      for (let t = -H/SCALE*1.2; t <= H/SCALE*1.2; t += 0.04) {
+        const c = w2c((t*t)/(4*pState.p), t);
+        if (c.x<-20||c.x>W+20||c.y<-20||c.y>H+20){first=true;continue;}
+        if (first){ctx.moveTo(c.x,c.y);first=false;}else ctx.lineTo(c.x,c.y);
+      }
+    } else {
+      for (let t = -W/SCALE*1.2; t <= W/SCALE*1.2; t += 0.04) {
+        const c = w2c(t, (t*t)/(4*pState.p));
+        if (c.x<-20||c.x>W+20||c.y<-20||c.y>H+20){first=true;continue;}
+        if (first){ctx.moveTo(c.x,c.y);first=false;}else ctx.lineTo(c.x,c.y);
+      }
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 방정식 (항상 표시)
+  ctx.save();
+  ctx.fillStyle = 'rgba(79,82,221,0.9)'; ctx.font = 'bold 27px system-ui';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(pState.mode === 'x' ? 'y² = 4px' : 'x² = 4py', 10, 10);
+  ctx.restore();
+
+  drawTrail(ctx, pState.trail);
+
+  // Distance lines
+  const P = pState.P, F = pFocus(), D = pDirFoot();
+  drawSegment(ctx, P.x, P.y, F.x, F.y, '#f97316', true);
+  drawSegment(ctx, P.x, P.y, D.x, D.y, '#3b82f6', true);
+  drawMidLabel(ctx, P.x, P.y, F.x, F.y, pDistPF().toFixed(2), '#ea6000');
+  if (pState.mode === 'x') {
+    const mc = w2c((P.x+D.x)/2, (P.y+D.y)/2);
+    ctx.save(); ctx.fillStyle='#2563eb'; ctx.font='bold 27px system-ui'; ctx.textAlign='center'; ctx.textBaseline='bottom';
+    ctx.fillText(pDistPL().toFixed(2), mc.x, mc.y-4); ctx.restore();
+  } else {
+    const mc = w2c((P.x+D.x)/2, (P.y+D.y)/2);
+    ctx.save(); ctx.fillStyle='#2563eb'; ctx.font='bold 27px system-ui'; ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(pDistPL().toFixed(2), mc.x+4, mc.y); ctx.restore();
+  }
+
+  // Focus F
+  drawDot(ctx, F.x, F.y, 6, '#111');
+  drawLabel(ctx, 'F', F.x, F.y, '#333', 8, 0, true);
+
+  // Point P
+  const pc = w2c(P.x, P.y);
+  ctx.save();
+  ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(pc.x, pc.y, 8, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(pc.x,pc.y,7,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(pc.x,pc.y,7,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+  drawLabel(ctx, 'P', P.x, P.y, '#333', 10, 0, true);
+}
+
+function pUpdatePanel() {
+  document.getElementById('p-val-p').textContent = pState.p.toFixed(2);
+  document.getElementById('p-val-pf').textContent = pDistPF().toFixed(2);
+  document.getElementById('p-val-dl').textContent = pDistPL().toFixed(2);
+  const ys = pState.trail.map(pt => pt.y), xs = pState.trail.map(pt => pt.x);
+  if (pState.mode === 'x') {
+    document.getElementById('p-range-text').textContent =
+      ys.length ? `그려진 범위: y ∈ [${Math.min(...ys).toFixed(2)}, ${Math.max(...ys).toFixed(2)}]` : '그려진 범위: y ∈ [0.00, 0.00]';
+  } else {
+    document.getElementById('p-range-text').textContent =
+      xs.length ? `그려진 범위: x ∈ [${Math.min(...xs).toFixed(2)}, ${Math.max(...xs).toFixed(2)}]` : '그려진 범위: x ∈ [0.00, 0.00]';
+  }
+}
+
+function pHitTest(pos) {
+  const pc = w2c(pState.P.x, pState.P.y);
+  if (Math.hypot(pos.x-pc.x, pos.y-pc.y) < 18) return 'P';
+  return null;
+}
+
+function pHandleDrag(wx, wy) {
+  if (pState.dragging === 'P') {
+    const prevP = {...pState.P};
+    pState.P = pConstrain(wx, wy);
+    // 이전 위치~현재 위치 사이를 곡선 위에서 보간
+    const p0 = pState.mode === 'x' ? prevP.y : prevP.x;
+    const p1 = pState.mode === 'x' ? pState.P.y : pState.P.x;
+    const steps = Math.max(1, Math.ceil(Math.abs(p1 - p0) / 0.04));
+    for (let i = 1; i <= steps; i++) {
+      const pv = p0 + (p1 - p0) * i / steps;
+      pState.trail.push(pState.mode === 'x'
+        ? { x: pv * pv / (4 * pState.p), y: pv }
+        : { x: pv, y: pv * pv / (4 * pState.p) });
+    }
+    while (pState.trail.length > 4000) pState.trail.shift();
+  }
+  pDraw(); pUpdatePanel();
+}
+
+pCanvas.addEventListener('mousedown', e => { pState.dragging = pHitTest(getPos(pCanvas, e)); });
+pCanvas.addEventListener('mousemove', e => {
+  if (!pState.dragging) { pCanvas.style.cursor = pHitTest(getPos(pCanvas,e)) ? 'grab' : 'crosshair'; return; }
+  const w = c2w(...Object.values(getPos(pCanvas, e))); pHandleDrag(w.x, w.y);
+});
+pCanvas.addEventListener('mouseup', () => { pState.dragging = null; });
+pCanvas.addEventListener('mouseleave', () => { pState.dragging = null; });
+pCanvas.addEventListener('touchstart', e => { pState.dragging = pHitTest(getPos(pCanvas, e)); }, {passive:true});
+pCanvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!pState.dragging) return;
+  const w = c2w(...Object.values(getPos(pCanvas, e))); pHandleDrag(w.x, w.y);
+}, {passive:false});
+pCanvas.addEventListener('touchend', () => { pState.dragging = null; });
+
+function setParabolaMode(mode) {
+  pState.mode = mode; pState.trail = []; pState.P = {x:0,y:0};
+  document.getElementById('p-btn-x').classList.toggle('active', mode==='x');
+  document.getElementById('p-btn-y').classList.toggle('active', mode==='y');
+  pDraw(); pUpdatePanel();
+}
+function pClearTrail() { pState.trail = []; pDraw(); pUpdatePanel(); }
+function pResetP() { pState.P = {x:0,y:0}; pState.trail = []; pDraw(); pUpdatePanel(); }
+function pToggleAnswer() { pState.showAnswer = document.getElementById('p-show-answer').checked; pDraw(); }
+
+
+// ============================================================
+//  FRACTION EQUATION DRAWING
+// ============================================================
+function drawFracEq(ctx, n1, d1, op, n2, d2, startX, startY, color) {
+  const fs = 26;
+  ctx.save();
+  ctx.fillStyle = color || 'rgba(79,82,221,0.9)';
+  ctx.font = `bold ${fs}px system-ui`;
+
+  const numH = fs;
+  const lineGap = 4, lineH = 2;
+  const midY = startY + numH + lineGap + lineH / 2;
+
+  function drawFrac(x, num, den) {
+    const nW = ctx.measureText(num).width;
+    const dW = ctx.measureText(den).width;
+    const fW = Math.max(nW, dW) + 14;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillText(num, x + fW / 2, startY + numH);
+    ctx.fillRect(x, startY + numH + lineGap, fW, lineH);
+    ctx.textBaseline = 'top';
+    ctx.fillText(den, x + fW / 2, startY + numH + lineGap + lineH + lineGap);
+    return fW;
+  }
+
+  let cx = startX;
+  cx += drawFrac(cx, n1, d1);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(` ${op} `, cx, midY);
+  cx += ctx.measureText(` ${op} `).width;
+  cx += drawFrac(cx, n2, d2);
+  ctx.textBaseline = 'middle';
+  ctx.fillText(' = 1', cx, midY);
+  ctx.restore();
+}
+
+// ============================================================
+//  ELLIPSE
+// ============================================================
+const eCanvas = document.getElementById('canvas-e');
+const eCtx = eCanvas.getContext('2d');
+
+const eState = {
+  mode: 'x', a: 5, c: 4,
+  P: { x: 5, y: 0 }, trail: [], showAnswer: false, dragging: null,
+};
+
+function eB() { return Math.sqrt(eState.a * eState.a - eState.c * eState.c); }
+function eF1() { return eState.mode === 'x' ? {x:-eState.c,y:0} : {x:0,y:-eState.c}; }
+function eF2() { return eState.mode === 'x' ? {x:eState.c,y:0} : {x:0,y:eState.c}; }
+
+function eConstrain(wx, wy) {
+  const {a, mode} = eState, b = eB();
+  if (mode === 'x') {
+    const theta = Math.atan2(wy / b, wx / a);
+    return { x: a * Math.cos(theta), y: b * Math.sin(theta) };
+  } else {
+    const theta = Math.atan2(wy / a, wx / b);
+    return { x: b * Math.cos(theta), y: a * Math.sin(theta) };
+  }
+}
+
+function eDistPF1() { const F=eF1(); return Math.hypot(eState.P.x-F.x, eState.P.y-F.y); }
+function eDistPF2() { const F=eF2(); return Math.hypot(eState.P.x-F.x, eState.P.y-F.y); }
+
+function eDraw() {
+  const ctx = eCtx;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8f8f6'; ctx.fillRect(0, 0, W, H);
+  drawGrid(ctx); drawAxes(ctx);
+
+  // Answer curve
+  if (eState.showAnswer) {
+    const b = eB();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(99,102,241,0.65)'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let t = 0; t <= Math.PI*2+0.01; t += 0.02) {
+      const wx = eState.mode === 'x' ? eState.a*Math.cos(t) : b*Math.cos(t);
+      const wy = eState.mode === 'x' ? b*Math.sin(t) : eState.a*Math.sin(t);
+      const c = w2c(wx, wy);
+      if (t === 0) ctx.moveTo(c.x, c.y); else ctx.lineTo(c.x, c.y);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 방정식 (항상 표시)
+  if (eState.mode === 'x') drawFracEq(ctx, 'x²', 'a²', '+', 'y²', 'b²', 10, 10, 'rgba(79,82,221,0.9)');
+  else drawFracEq(ctx, 'x²', 'b²', '+', 'y²', 'a²', 10, 10, 'rgba(79,82,221,0.9)');
+
+  drawTrail(ctx, eState.trail);
+
+  // Distance lines
+  const P = eState.P, F1 = eF1(), F2 = eF2();
+  drawSegment(ctx, P.x, P.y, F1.x, F1.y, '#f97316', true);
+  drawSegment(ctx, P.x, P.y, F2.x, F2.y, '#3b82f6', true);
+  drawMidLabel(ctx, P.x, P.y, F1.x, F1.y, eDistPF1().toFixed(2), '#ea6000');
+  drawMidLabel(ctx, P.x, P.y, F2.x, F2.y, eDistPF2().toFixed(2), '#2563eb');
+
+  // Foci
+  drawDot(ctx, F1.x, F1.y, 6, '#111');
+  drawLabel(ctx, 'F₁', F1.x, F1.y, '#333', 8, 0, true);
+  drawDot(ctx, F2.x, F2.y, 6, '#111');
+  drawLabel(ctx, 'F₂', F2.x, F2.y, '#333', 8, 0, true);
+
+  // Point P
+  const pc = w2c(P.x, P.y);
+  ctx.save();
+  ctx.strokeStyle='rgba(0,0,0,0.12)'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.arc(pc.x,pc.y,8,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(pc.x,pc.y,7,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(pc.x,pc.y,7,0,Math.PI*2); ctx.stroke();
+  ctx.restore();
+  drawLabel(ctx, 'P', P.x, P.y, '#333', 10, 0, true);
+}
+
+function eUpdatePanel() {
+  const b = eB();
+  const pf1 = eDistPF1(), pf2 = eDistPF2();
+  document.getElementById('e-val-a').textContent = (2 * eState.a).toFixed(2);
+  document.getElementById('e-val-b').textContent = (2 * b).toFixed(2);
+  document.getElementById('e-val-c').textContent = eState.c.toFixed(2);
+  document.getElementById('e-val-pf1').textContent = pf1.toFixed(2);
+  document.getElementById('e-val-pf2').textContent = pf2.toFixed(2);
+  document.getElementById('e-val-sum').textContent = (pf1 + pf2).toFixed(2);
+}
+
+function eHitTest(pos) {
+  const pc = w2c(eState.P.x, eState.P.y);
+  if (Math.hypot(pos.x-pc.x, pos.y-pc.y) < 18) return 'P';
+  return null;
+}
+
+function eHandleDrag(wx, wy) {
+  if (eState.dragging === 'P') {
+    const { a, mode } = eState, b = eB();
+    const prevP = {...eState.P};
+    eState.P = eConstrain(wx, wy);
+    // 각도 파라미터로 보간
+    const theta0 = mode === 'x' ? Math.atan2(prevP.y / b, prevP.x / a) : Math.atan2(prevP.y / a, prevP.x / b);
+    const theta1 = mode === 'x' ? Math.atan2(eState.P.y / b, eState.P.x / a) : Math.atan2(eState.P.y / a, eState.P.x / b);
+    let dTheta = theta1 - theta0;
+    if (dTheta > Math.PI) dTheta -= 2 * Math.PI;
+    if (dTheta < -Math.PI) dTheta += 2 * Math.PI;
+    const steps = Math.max(1, Math.ceil(Math.abs(dTheta) / 0.02));
+    for (let i = 1; i <= steps; i++) {
+      const theta = theta0 + dTheta * i / steps;
+      eState.trail.push(mode === 'x'
+        ? { x: a * Math.cos(theta), y: b * Math.sin(theta) }
+        : { x: b * Math.cos(theta), y: a * Math.sin(theta) });
+    }
+    while (eState.trail.length > 4000) eState.trail.shift();
+  }
+  eDraw(); eUpdatePanel();
+}
+
+eCanvas.addEventListener('mousedown', e => { eState.dragging = eHitTest(getPos(eCanvas, e)); });
+eCanvas.addEventListener('mousemove', e => {
+  if (!eState.dragging) { eCanvas.style.cursor = eHitTest(getPos(eCanvas,e)) ? 'grab' : 'crosshair'; return; }
+  const w = c2w(...Object.values(getPos(eCanvas, e))); eHandleDrag(w.x, w.y);
+});
+eCanvas.addEventListener('mouseup', () => { eState.dragging = null; });
+eCanvas.addEventListener('mouseleave', () => { eState.dragging = null; });
+eCanvas.addEventListener('touchstart', e => { eState.dragging = eHitTest(getPos(eCanvas, e)); }, {passive:true});
+eCanvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!eState.dragging) return;
+  const w = c2w(...Object.values(getPos(eCanvas, e))); eHandleDrag(w.x, w.y);
+}, {passive:false});
+eCanvas.addEventListener('touchend', () => { eState.dragging = null; });
+
+function setEllipseMode(mode) {
+  eState.mode = mode; eState.trail = [];
+  eState.P = mode === 'x' ? {x:eState.a,y:0} : {x:0,y:eState.a};
+  document.getElementById('e-btn-x').classList.toggle('active', mode==='x');
+  document.getElementById('e-btn-y').classList.toggle('active', mode==='y');
+  eDraw(); eUpdatePanel();
+}
+function eClearTrail() { eState.trail = []; eDraw(); eUpdatePanel(); }
+function eResetP() {
+  eState.P = eState.mode === 'x' ? {x:eState.a,y:0} : {x:0,y:eState.a};
+  eState.trail = []; eDraw(); eUpdatePanel();
+}
+function eToggleAnswer() { eState.showAnswer = document.getElementById('e-show-answer').checked; eDraw(); }
+
+
+// ============================================================
+//  HYPERBOLA
+// ============================================================
+const hCanvas = document.getElementById('canvas-h');
+const hCtx = hCanvas.getContext('2d');
+
+const hState = {
+  mode: 'x', a: 2, c: 4,
+  P1: { x: 2, y: 0 },   // 오른쪽/위쪽 가지
+  P2: { x: -2, y: 0 },  // 왼쪽/아래쪽 가지
+  trail1: [], trail2: [],
+  showAnswer: false, dragging: null,
+};
+
+function hB() { return Math.sqrt(hState.c * hState.c - hState.a * hState.a); }
+function hF1() { return hState.mode === 'x' ? {x:-hState.c,y:0} : {x:0,y:-hState.c}; }
+function hF2() { return hState.mode === 'x' ? {x:hState.c,y:0} : {x:0,y:hState.c}; }
+
+// sign: +1 = 오른쪽/위 가지, -1 = 왼쪽/아래 가지
+function hConstrainBranch(wx, wy, sign) {
+  const {a, mode} = hState, b = hB();
+  if (mode === 'x') {
+    const xAbs = a * Math.sqrt(1 + (wy / b) * (wy / b));
+    return { x: sign * xAbs, y: wy };
+  } else {
+    const yAbs = a * Math.sqrt(1 + (wx / b) * (wx / b));
+    return { x: wx, y: sign * yAbs };
+  }
+}
+
+function hDist(P, F) { return Math.hypot(P.x - F.x, P.y - F.y); }
+
+function hDrawPoint(ctx, P) {
+  const pc = w2c(P.x, P.y);
+  ctx.save();
+  ctx.strokeStyle = 'rgba(0,0,0,0.12)'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(pc.x, pc.y, 8, 0, Math.PI * 2); ctx.stroke();
+  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(pc.x, pc.y, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(pc.x, pc.y, 7, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+  drawLabel(ctx, 'P', P.x, P.y, '#333', 10, 0, true);
+}
+
+function hDraw() {
+  const ctx = hCtx;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8f8f6'; ctx.fillRect(0, 0, W, H);
+  drawGrid(ctx); drawAxes(ctx);
+
+  // 점근선
+  const b = hB();
+  ctx.save();
+  ctx.strokeStyle = 'rgba(150,150,150,0.4)'; ctx.lineWidth = 1.2; ctx.setLineDash([6, 4]);
+  if (hState.mode === 'x') {
+    const slope = b / hState.a;
+    ctx.beginPath(); ctx.moveTo(w2c(-W/SCALE, -(W/SCALE)*slope).x, w2c(-W/SCALE, -(W/SCALE)*slope).y);
+    ctx.lineTo(w2c(W/SCALE, (W/SCALE)*slope).x, w2c(W/SCALE, (W/SCALE)*slope).y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w2c(-W/SCALE, (W/SCALE)*slope).x, w2c(-W/SCALE, (W/SCALE)*slope).y);
+    ctx.lineTo(w2c(W/SCALE, -(W/SCALE)*slope).x, w2c(W/SCALE, -(W/SCALE)*slope).y); ctx.stroke();
+  } else {
+    const slope = hState.a / b;
+    ctx.beginPath(); ctx.moveTo(w2c(-W/SCALE, -(W/SCALE)*slope).x, w2c(-W/SCALE, -(W/SCALE)*slope).y);
+    ctx.lineTo(w2c(W/SCALE, (W/SCALE)*slope).x, w2c(W/SCALE, (W/SCALE)*slope).y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w2c(-W/SCALE, (W/SCALE)*slope).x, w2c(-W/SCALE, (W/SCALE)*slope).y);
+    ctx.lineTo(w2c(W/SCALE, -(W/SCALE)*slope).x, w2c(W/SCALE, -(W/SCALE)*slope).y); ctx.stroke();
+  }
+  ctx.setLineDash([]); ctx.restore();
+
+  // 정답 곡선
+  if (hState.showAnswer) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(99,102,241,0.65)'; ctx.lineWidth = 2;
+    for (const sign of [1, -1]) {
+      ctx.beginPath(); let first = true;
+      for (let i = 0; i <= 200; i++) {
+        const t = -3 + (6 * i / 200);
+        const wx = hState.mode === 'x' ? sign * hState.a * Math.cosh(t) : b * Math.sinh(t);
+        const wy = hState.mode === 'x' ? b * Math.sinh(t) : sign * hState.a * Math.cosh(t);
+        const c = w2c(wx, wy);
+        if (c.x<-20||c.x>W+20||c.y<-20||c.y>H+20){first=true;continue;}
+        if (first){ctx.moveTo(c.x,c.y);first=false;}else ctx.lineTo(c.x,c.y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // 방정식 (항상 표시)
+  if (hState.mode === 'x') drawFracEq(ctx, 'x²', 'a²', '−', 'y²', 'b²', 10, 10, 'rgba(79,82,221,0.9)');
+  else drawFracEq(ctx, 'y²', 'a²', '−', 'x²', 'b²', 10, 10, 'rgba(79,82,221,0.9)');
+
+  // 자취
+  drawTrail(ctx, hState.trail1);
+  drawTrail(ctx, hState.trail2);
+
+  // 초점
+  const F1 = hF1(), F2 = hF2();
+  drawDot(ctx, F1.x, F1.y, 6, '#111');
+  drawLabel(ctx, 'F₁', F1.x, F1.y, '#333', 8, 0, true);
+  drawDot(ctx, F2.x, F2.y, 6, '#111');
+  drawLabel(ctx, 'F₂', F2.x, F2.y, '#333', 8, 0, true);
+
+  // P1 거리선 + 점
+  const P1 = hState.P1;
+  drawSegment(ctx, P1.x, P1.y, F1.x, F1.y, '#f97316', true);
+  drawSegment(ctx, P1.x, P1.y, F2.x, F2.y, '#3b82f6', true);
+  drawMidLabel(ctx, P1.x, P1.y, F1.x, F1.y, hDist(P1, F1).toFixed(2), '#ea6000');
+  drawMidLabel(ctx, P1.x, P1.y, F2.x, F2.y, hDist(P1, F2).toFixed(2), '#2563eb');
+  hDrawPoint(ctx, P1);
+
+  // P2 거리선 + 점
+  const P2 = hState.P2;
+  drawSegment(ctx, P2.x, P2.y, F1.x, F1.y, '#f97316', true);
+  drawSegment(ctx, P2.x, P2.y, F2.x, F2.y, '#3b82f6', true);
+  drawMidLabel(ctx, P2.x, P2.y, F1.x, F1.y, hDist(P2, F1).toFixed(2), '#ea6000');
+  drawMidLabel(ctx, P2.x, P2.y, F2.x, F2.y, hDist(P2, F2).toFixed(2), '#2563eb');
+  hDrawPoint(ctx, P2);
+}
+
+function hUpdatePanel() {
+  const b = hB(), F1 = hF1(), F2 = hF2();
+  const p1f1 = hDist(hState.P1, F1), p1f2 = hDist(hState.P1, F2);
+  const p2f1 = hDist(hState.P2, F1), p2f2 = hDist(hState.P2, F2);
+  document.getElementById('h-val-a').textContent = hState.a.toFixed(2);
+  document.getElementById('h-val-b').textContent = b.toFixed(2);
+  document.getElementById('h-val-c').textContent = hState.c.toFixed(2);
+  document.getElementById('h-val-p1f1').textContent = p1f1.toFixed(2);
+  document.getElementById('h-val-p1f2').textContent = p1f2.toFixed(2);
+  document.getElementById('h-val-p1diff').textContent = Math.abs(p1f1 - p1f2).toFixed(2);
+  document.getElementById('h-val-p2f1').textContent = p2f1.toFixed(2);
+  document.getElementById('h-val-p2f2').textContent = p2f2.toFixed(2);
+  document.getElementById('h-val-p2diff').textContent = Math.abs(p2f1 - p2f2).toFixed(2);
+}
+
+function hHitTest(pos) {
+  const p1c = w2c(hState.P1.x, hState.P1.y);
+  const p2c = w2c(hState.P2.x, hState.P2.y);
+  if (Math.hypot(pos.x-p1c.x, pos.y-p1c.y) < 18) return 'P1';
+  if (Math.hypot(pos.x-p2c.x, pos.y-p2c.y) < 18) return 'P2';
+  return null;
+}
+
+function hHandleDrag(wx, wy) {
+  const b = hB(), { a, mode } = hState;
+  function interpHyp(trail, prevP, newP, sign) {
+    const p0 = mode === 'x' ? prevP.y : prevP.x;
+    const p1 = mode === 'x' ? newP.y : newP.x;
+    const steps = Math.max(1, Math.ceil(Math.abs(p1 - p0) / 0.04));
+    for (let i = 1; i <= steps; i++) {
+      const pv = p0 + (p1 - p0) * i / steps;
+      if (mode === 'x') trail.push({ x: sign * a * Math.sqrt(1 + (pv/b)*(pv/b)), y: pv });
+      else              trail.push({ x: pv, y: sign * a * Math.sqrt(1 + (pv/b)*(pv/b)) });
+    }
+    while (trail.length > 4000) trail.shift();
+  }
+  if (hState.dragging === 'P1') {
+    const prevP = {...hState.P1};
+    hState.P1 = hConstrainBranch(wx, wy, 1);
+    interpHyp(hState.trail1, prevP, hState.P1, 1);
+  } else if (hState.dragging === 'P2') {
+    const prevP = {...hState.P2};
+    hState.P2 = hConstrainBranch(wx, wy, -1);
+    interpHyp(hState.trail2, prevP, hState.P2, -1);
+  }
+  hDraw(); hUpdatePanel();
+}
+
+hCanvas.addEventListener('mousedown', e => { hState.dragging = hHitTest(getPos(hCanvas, e)); });
+hCanvas.addEventListener('mousemove', e => {
+  if (!hState.dragging) { hCanvas.style.cursor = hHitTest(getPos(hCanvas,e)) ? 'grab' : 'crosshair'; return; }
+  const w = c2w(...Object.values(getPos(hCanvas, e))); hHandleDrag(w.x, w.y);
+});
+hCanvas.addEventListener('mouseup', () => { hState.dragging = null; });
+hCanvas.addEventListener('mouseleave', () => { hState.dragging = null; });
+hCanvas.addEventListener('touchstart', e => { hState.dragging = hHitTest(getPos(hCanvas, e)); }, {passive:true});
+hCanvas.addEventListener('touchmove', e => {
+  e.preventDefault();
+  if (!hState.dragging) return;
+  const w = c2w(...Object.values(getPos(hCanvas, e))); hHandleDrag(w.x, w.y);
+}, {passive:false});
+hCanvas.addEventListener('touchend', () => { hState.dragging = null; });
+
+function setHyperbolaMode(mode) {
+  hState.mode = mode; hState.trail1 = []; hState.trail2 = [];
+  hState.P1 = mode === 'x' ? {x: hState.a, y:0} : {x:0, y: hState.a};
+  hState.P2 = mode === 'x' ? {x:-hState.a, y:0} : {x:0, y:-hState.a};
+  document.getElementById('h-btn-x').classList.toggle('active', mode==='x');
+  document.getElementById('h-btn-y').classList.toggle('active', mode==='y');
+  hDraw(); hUpdatePanel();
+}
+function hClearTrail() { hState.trail1 = []; hState.trail2 = []; hDraw(); hUpdatePanel(); }
+function hResetP() {
+  hState.P1 = hState.mode === 'x' ? {x: hState.a, y:0} : {x:0, y: hState.a};
+  hState.P2 = hState.mode === 'x' ? {x:-hState.a, y:0} : {x:0, y:-hState.a};
+  hState.trail1 = []; hState.trail2 = []; hDraw(); hUpdatePanel();
+}
+function hToggleAnswer() { hState.showAnswer = document.getElementById('h-show-answer').checked; hDraw(); }
+
+
+// ============================================================
+//  PARABOLA PROPERTIES
+// ============================================================
+const ppCanvas = document.getElementById('canvas-pp');
+const ppCtx = ppCanvas.getContext('2d');
+const ppState = { mode: 'x', p: 2 };
+
+function ppOnSlide() {
+  ppState.p = parseFloat(document.getElementById('pp-slider-p').value);
+  document.getElementById('pp-sv-p').textContent = ppState.p.toFixed(1);
+  ppDraw(); ppUpdatePanel();
+}
+
+function setPPMode(mode) {
+  ppState.mode = mode;
+  document.getElementById('pp-btn-x').classList.toggle('active', mode === 'x');
+  document.getElementById('pp-btn-y').classList.toggle('active', mode === 'y');
+  document.getElementById('pp-explain-eq').textContent = mode === 'x' ? 'y² = 4px' : 'x² = 4py';
+  document.getElementById('pp-explain-box').innerHTML =
+    `<span class="formula-line" id="pp-explain-eq">${mode === 'x' ? 'y² = 4px' : 'x² = 4py'}</span>` +
+    (mode === 'x'
+      ? 'p &gt; 0 : 1, 4사분면에 그려짐, F(p, 0)<br>p &lt; 0 : 2, 3사분면에 그려짐, F(p, 0)<br>준선 : x = −p<br>|p|가 클수록 포물선이 넓어집니다.'
+      : 'p &gt; 0 : 1, 2사분면에 그려짐, F(0, p)<br>p &lt; 0 : 3, 4사분면에 그려짐, F(0, p)<br>준선 : y = −p<br>|p|가 클수록 포물선이 넓어집니다.');
+  ppDraw(); ppUpdatePanel();
+}
+
+function ppUpdatePanel() {
+  const p = ppState.p, mode = ppState.mode;
+  document.getElementById('pp-tv-p').textContent = p.toFixed(2);
+  document.getElementById('pp-tv-4p').textContent = (4 * p).toFixed(2);
+  if (mode === 'x') {
+    document.getElementById('pp-tv-focus').textContent = `(${p.toFixed(2)}, 0)`;
+    document.getElementById('pp-tv-dir').textContent = `x = ${(-p).toFixed(2)}`;
+  } else {
+    document.getElementById('pp-tv-focus').textContent = `(0, ${p.toFixed(2)})`;
+    document.getElementById('pp-tv-dir').textContent = `y = ${(-p).toFixed(2)}`;
+  }
+}
+
+function ppDraw() {
+  const ctx = ppCtx, p = ppState.p, mode = ppState.mode;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8f8f6'; ctx.fillRect(0, 0, W, H);
+  drawGrid(ctx); drawAxes(ctx);
+
+  const hasP = Math.abs(p) > 0.05;
+
+  if (hasP) {
+    // Directrix
+    ctx.save();
+    ctx.strokeStyle = '#aaa'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+    if (mode === 'x') {
+      const dcx = w2c(-p, 0).x;
+      ctx.beginPath(); ctx.moveTo(dcx, 0); ctx.lineTo(dcx, H); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#888'; ctx.font = '23px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('준선 x = ' + (-p).toFixed(1), dcx, 8);
+    } else {
+      const dcy = w2c(0, -p).y;
+      ctx.beginPath(); ctx.moveTo(0, dcy); ctx.lineTo(W, dcy); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#888'; ctx.font = '23px system-ui'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText('준선 y = ' + (-p).toFixed(1), W - 8, dcy - 18);
+    }
+    ctx.restore();
+
+    // Parabola curve
+    ctx.save();
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); let first = true;
+    if (mode === 'x') {
+      for (let t = -H / SCALE * 1.3; t <= H / SCALE * 1.3; t += 0.025) {
+        const pt = w2c(t * t / (4 * p), t);
+        if (pt.x < -30 || pt.x > W + 30 || pt.y < -30 || pt.y > H + 30) { first = true; continue; }
+        if (first) { ctx.moveTo(pt.x, pt.y); first = false; } else ctx.lineTo(pt.x, pt.y);
+      }
+    } else {
+      for (let t = -W / SCALE * 1.3; t <= W / SCALE * 1.3; t += 0.025) {
+        const pt = w2c(t, t * t / (4 * p));
+        if (pt.x < -30 || pt.x > W + 30 || pt.y < -30 || pt.y > H + 30) { first = true; continue; }
+        if (first) { ctx.moveTo(pt.x, pt.y); first = false; } else ctx.lineTo(pt.x, pt.y);
+      }
+    }
+    ctx.stroke(); ctx.restore();
+
+    // p dimension arrow
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 3]);
+    if (mode === 'x') {
+      const ya = CY - 28;
+      ctx.beginPath(); ctx.moveTo(CX, ya); ctx.lineTo(w2c(p, 0).x, ya); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#111'; ctx.font = 'bold 22px system-ui'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText('p', (CX + w2c(p, 0).x) / 2, ya - 2);
+    } else {
+      const xa = CX + 28;
+      ctx.beginPath(); ctx.moveTo(xa, CY); ctx.lineTo(xa, w2c(0, p).y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = '#111'; ctx.font = 'bold 22px system-ui'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText('p', xa + 4, (CY + w2c(0, p).y) / 2);
+    }
+    ctx.restore();
+
+    // Focus
+    const fx = mode === 'x' ? p : 0, fy = mode === 'x' ? 0 : p;
+    drawDot(ctx, fx, fy, 7, '#111');
+    const fLabel = mode === 'x' ? `F(${p.toFixed(1)}, 0)` : `F(0, ${p.toFixed(1)})`;
+    const fOx = p >= 0 ? 10 : -10;
+    const fAnch = p >= 0 ? 'left' : 'right';
+    const fc = w2c(fx, fy);
+    ctx.save();
+    ctx.fillStyle = '#333'; ctx.font = 'bold 25px system-ui';
+    ctx.textAlign = fAnch; ctx.textBaseline = 'bottom';
+    ctx.fillText(fLabel, fc.x + fOx, fc.y - 6);
+    ctx.restore();
+  }
+
+  // Equation (always)
+  const coeff = (4 * p).toFixed(1);
+  const eqStr = mode === 'x' ? `y² = ${coeff}x` : `x² = ${coeff}y`;
+  ctx.save();
+  ctx.fillStyle = 'rgba(79,82,221,0.9)'; ctx.font = 'bold 28px system-ui';
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillText(eqStr, 10, 10);
+  ctx.restore();
+}
+
+// ============================================================
+//  ELLIPSE PROPERTIES
+// ============================================================
+const epCanvas = document.getElementById('canvas-ep');
+const epCtx = epCanvas.getContext('2d');
+const epState = { a: 5, b: 3 };
+
+function epGetC() {
+  const { a, b } = epState;
+  if (Math.abs(a - b) < 0.001) return 0;
+  return Math.sqrt(Math.abs(a * a - b * b));
+}
+
+function epOnSlide() {
+  epState.a = parseFloat(document.getElementById('ep-slider-a').value);
+  epState.b = parseFloat(document.getElementById('ep-slider-b').value);
+  document.getElementById('ep-sv-a').textContent = epState.a.toFixed(1);
+  document.getElementById('ep-sv-b').textContent = epState.b.toFixed(1);
+  epDraw(); epUpdatePanel();
+}
+
+function epUpdatePanel() {
+  const { a, b } = epState;
+  const c = epGetC();
+  document.getElementById('ep-tv-a').textContent = (2 * a).toFixed(2);
+  document.getElementById('ep-tv-b').textContent = (2 * b).toFixed(2);
+  document.getElementById('ep-tv-c').textContent = c.toFixed(2);
+  if (Math.abs(a - b) < 0.001) {
+    document.getElementById('ep-lbl-a').textContent = 'a';
+    document.getElementById('ep-lbl-b').textContent = 'b';
+    document.getElementById('ep-sub-a').textContent = '= 2a';
+    document.getElementById('ep-sub-b').textContent = '= 2b';
+    document.getElementById('ep-slbl-a').textContent = '';
+    document.getElementById('ep-slbl-b').textContent = '';
+    document.getElementById('ep-td-clabel').textContent = 'c (a = b)';
+    document.getElementById('ep-tv-f1').textContent = '—';
+    document.getElementById('ep-tv-f2').textContent = '—';
+    document.getElementById('ep-explain').innerHTML =
+      '<span class="formula-line">a = b일 때 → 원</span>a = b이면 타원이 아닌 원이 됩니다.<br>초점이 원의 중심(원점)과 일치합니다.';
+  } else if (a > b) {
+    document.getElementById('ep-lbl-a').textContent = '장축';
+    document.getElementById('ep-lbl-b').textContent = '단축';
+    document.getElementById('ep-sub-a').textContent = '= 2a';
+    document.getElementById('ep-sub-b').textContent = '= 2b';
+    document.getElementById('ep-slbl-a').textContent = '장반축';
+    document.getElementById('ep-slbl-b').textContent = '단반축';
+    document.getElementById('ep-td-clabel').innerHTML = 'c = √<span class="rad-inner">a²−b²</span>';
+    document.getElementById('ep-tv-f1').textContent = `(−${c.toFixed(2)}, 0)`;
+    document.getElementById('ep-tv-f2').textContent = `(${c.toFixed(2)}, 0)`;
+    document.getElementById('ep-explain').innerHTML =
+      '<span class="formula-line">a &gt; b일 때</span>c² = a² − b²<br>초점 F₁(−c, 0), F₂(c, 0)<br>초점은 <strong>x축(장축)</strong> 위에 있습니다.';
+  } else {
+    document.getElementById('ep-lbl-a').textContent = '단축';
+    document.getElementById('ep-lbl-b').textContent = '장축';
+    document.getElementById('ep-sub-a').textContent = '= 2a';
+    document.getElementById('ep-sub-b').textContent = '= 2b';
+    document.getElementById('ep-slbl-a').textContent = '단반축';
+    document.getElementById('ep-slbl-b').textContent = '장반축';
+    document.getElementById('ep-td-clabel').innerHTML = 'c = √<span class="rad-inner">b²−a²</span>';
+    document.getElementById('ep-tv-f1').textContent = `(0, −${c.toFixed(2)})`;
+    document.getElementById('ep-tv-f2').textContent = `(0, ${c.toFixed(2)})`;
+    document.getElementById('ep-explain').innerHTML =
+      '<span class="formula-line">b &gt; a일 때</span>c² = b² − a²<br>초점 F₁(0, −c), F₂(0, c)<br>초점은 <strong>y축(장축)</strong> 위에 있습니다.';
+  }
+}
+
+function epDraw() {
+  const ctx = epCtx, { a, b } = epState;
+  const c = epGetC();
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8f8f6'; ctx.fillRect(0, 0, W, H);
+  drawGrid(ctx); drawAxes(ctx);
+
+  // Ellipse
+  ctx.save();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for (let t = 0; t <= Math.PI * 2 + 0.01; t += 0.02) {
+    const pt = w2c(a * Math.cos(t), b * Math.sin(t));
+    if (t === 0) ctx.moveTo(pt.x, pt.y); else ctx.lineTo(pt.x, pt.y);
+  }
+  ctx.stroke(); ctx.restore();
+
+  // a, b 끝점 레이블
+  ctx.save();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 1.8;
+  const aRpt = w2c(a, 0), aLpt = w2c(-a, 0);
+  const bTpt = w2c(0, b), bBpt = w2c(0, -b);
+
+  // 원점→꼭짓점 보조선
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1.2; ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(aRpt.x, aRpt.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(CX, CY); ctx.lineTo(bTpt.x, bTpt.y); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 꼭짓점 tick
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(aRpt.x, aRpt.y - 8); ctx.lineTo(aRpt.x, aRpt.y + 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(aLpt.x, aLpt.y - 8); ctx.lineTo(aLpt.x, aLpt.y + 8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bTpt.x - 8, bTpt.y); ctx.lineTo(bTpt.x + 8, bTpt.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(bBpt.x - 8, bBpt.y); ctx.lineTo(bBpt.x + 8, bBpt.y); ctx.stroke();
+
+  // 꼭짓점 좌표 레이블 — x축 꼭짓점 아래, y축 꼭짓점 오른쪽
+  ctx.fillStyle = '#111'; ctx.font = 'bold 22px system-ui';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText(`(${a.toFixed(1)}, 0)`, aRpt.x, aRpt.y + 12);
+  ctx.fillText(`(${(-a).toFixed(1)}, 0)`, aLpt.x, aLpt.y + 12);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(`(0, ${b.toFixed(1)})`, bTpt.x + 10, bTpt.y);
+  ctx.fillText(`(0, ${(-b).toFixed(1)})`, bBpt.x + 10, bBpt.y);
+  ctx.restore();
+
+  // Foci — 검정, 레이블 안쪽(중심 방향) 위에 표시
+  if (c > 0.05) {
+    if (a >= b) {
+      drawDot(ctx, -c, 0, 7, '#111');
+      drawDot(ctx, c, 0, 7, '#111');
+      const f1c = w2c(-c, 0), f2c = w2c(c, 0);
+      ctx.save();
+      ctx.fillStyle = '#111'; ctx.font = 'bold 23px system-ui'; ctx.textBaseline = 'bottom';
+      ctx.textAlign = 'left';
+      ctx.fillText(`F₁(−${c.toFixed(1)}, 0)`, f1c.x + 6, f1c.y - 6);
+      ctx.textAlign = 'right';
+      ctx.fillText(`F₂(${c.toFixed(1)}, 0)`, f2c.x - 6, f2c.y - 6);
+      ctx.restore();
+    } else {
+      drawDot(ctx, 0, -c, 7, '#111');
+      drawDot(ctx, 0, c, 7, '#111');
+      const f1c = w2c(0, -c), f2c = w2c(0, c);
+      ctx.save();
+      ctx.fillStyle = '#111'; ctx.font = 'bold 23px system-ui'; ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`F₁(0, −${c.toFixed(1)})`, f1c.x + 10, f1c.y + 6);
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(`F₂(0, ${c.toFixed(1)})`, f2c.x + 10, f2c.y - 6);
+      ctx.restore();
+    }
+  }
+
+  // Equation
+  const a2 = (a * a).toFixed(1), b2 = (b * b).toFixed(1);
+  drawFracEq(ctx, 'x²', a2, '+', 'y²', b2, 10, 10, 'rgba(79,82,221,0.9)');
+}
+
+// ============================================================
+//  HYPERBOLA PROPERTIES
+// ============================================================
+const hpCanvas = document.getElementById('canvas-hp');
+const hpCtx = hpCanvas.getContext('2d');
+const hpState = { a: 2, b: 3 };
+
+function hpGetC() { return Math.sqrt(hpState.a * hpState.a + hpState.b * hpState.b); }
+
+function hpOnSlide() {
+  hpState.a = parseFloat(document.getElementById('hp-slider-a').value);
+  hpState.b = parseFloat(document.getElementById('hp-slider-b').value);
+  document.getElementById('hp-sv-a').textContent = hpState.a.toFixed(1);
+  document.getElementById('hp-sv-b').textContent = hpState.b.toFixed(1);
+  hpDraw(); hpUpdatePanel();
+}
+
+function hpUpdatePanel() {
+  const { a, b } = hpState;
+  const c = hpGetC(), slope = b / a;
+  document.getElementById('hp-tv-a').textContent = a.toFixed(2);
+  document.getElementById('hp-tv-b').textContent = b.toFixed(2);
+  document.getElementById('hp-tv-c').textContent = c.toFixed(2);
+  document.getElementById('hp-tv-f1').textContent = `(−${c.toFixed(2)}, 0)`;
+  document.getElementById('hp-tv-f2').textContent = `(${c.toFixed(2)}, 0)`;
+  document.getElementById('hp-tv-asym').textContent = `y = ±${slope.toFixed(2)}x`;
+  document.getElementById('hp-asym-frac').innerHTML = `<span class="frac"><span class="num">${b.toFixed(1)}</span><span class="den">${a.toFixed(1)}</span></span>`;
+}
+
+function hpDraw() {
+  const ctx = hpCtx, { a, b } = hpState;
+  const c = hpGetC(), slope = b / a;
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#f8f8f6'; ctx.fillRect(0, 0, W, H);
+
+  const zoom = 0.78;
+  // 화면 좌표 변환 (zoom 적용 후 실제 픽셀 위치)
+  const sw = (wx, wy) => {
+    const p = w2c(wx, wy);
+    return { x: CX + (p.x - CX) * zoom, y: CY + (p.y - CY) * zoom };
+  };
+
+  // ── 도형 (zoom 변환 안) ─────────────────────────────────────
+  ctx.save();
+  ctx.translate(CX, CY); ctx.scale(zoom, zoom); ctx.translate(-CX, -CY);
+
+  drawGrid(ctx); drawAxes(ctx);
+
+  // 보조 사각형
+  const ext = W / SCALE;
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+  const rTR = w2c(a,b), rTL = w2c(-a,b), rBL = w2c(-a,-b), rBR = w2c(a,-b);
+  ctx.beginPath(); ctx.moveTo(rTR.x,rTR.y); ctx.lineTo(rTL.x,rTL.y);
+  ctx.lineTo(rBL.x,rBL.y); ctx.lineTo(rBR.x,rBR.y); ctx.closePath(); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';
+  for (const [wx,wy] of [[a,b],[-a,b],[-a,-b],[a,-b]]) {
+    const pt = w2c(wx,wy);
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,4,0,Math.PI*2); ctx.fill();
+  }
+
+  // 점근선
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 1.8; ctx.setLineDash([6,4]);
+  ctx.beginPath(); ctx.moveTo(w2c(-ext,-ext*slope).x,w2c(-ext,-ext*slope).y);
+  ctx.lineTo(w2c(ext,ext*slope).x,w2c(ext,ext*slope).y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(w2c(-ext,ext*slope).x,w2c(-ext,ext*slope).y);
+  ctx.lineTo(w2c(ext,-ext*slope).x,w2c(ext,-ext*slope).y); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 쌍곡선 곡선
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 2.5;
+  for (const sign of [1,-1]) {
+    ctx.beginPath(); let first = true;
+    for (let i = 0; i <= 300; i++) {
+      const t = -3.2 + 6.4*i/300;
+      const pt = w2c(sign*a*Math.cosh(t), b*Math.sinh(t));
+      if (pt.x<-30||pt.x>W+30||pt.y<-30||pt.y>H+30){first=true;continue;}
+      if(first){ctx.moveTo(pt.x,pt.y);first=false;}else ctx.lineTo(pt.x,pt.y);
+    }
+    ctx.stroke();
+  }
+
+  // 꼭짓점 보조선 + 점
+  ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 1.2; ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(CX,CY); ctx.lineTo(w2c(a,0).x,CY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#111';
+  for (const [wx,wy,r] of [[a,0,5],[-a,0,5],[-c,0,7],[c,0,7]]) {
+    const pt = w2c(wx,wy);
+    ctx.beginPath(); ctx.arc(pt.x,pt.y,r,0,Math.PI*2); ctx.fill();
+  }
+
+  ctx.restore(); // zoom 변환 끝
+
+  // ── 텍스트 레이블 (원본 크기, sw() 좌표 사용) ────────────────
+
+  // 사각형 꼭짓점 좌표
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.font = '19px system-ui';
+  const rectPts = [
+    { wx:a,  wy:b,  label:`(${a.toFixed(1)}, ${b.toFixed(1)})`,        ax:'left',  ay:'bottom' },
+    { wx:-a, wy:b,  label:`(${(-a).toFixed(1)}, ${b.toFixed(1)})`,     ax:'right', ay:'bottom' },
+    { wx:-a, wy:-b, label:`(${(-a).toFixed(1)}, ${(-b).toFixed(1)})`,  ax:'right', ay:'top' },
+    { wx:a,  wy:-b, label:`(${a.toFixed(1)}, ${(-b).toFixed(1)})`,     ax:'left',  ay:'top' },
+  ];
+  for (const { wx, wy, label, ax, ay } of rectPts) {
+    const pt = sw(wx, wy);
+    ctx.textAlign = ax; ctx.textBaseline = ay === 'bottom' ? 'bottom' : 'top';
+    ctx.fillText(label, pt.x + (ax==='left'?7:-7), pt.y + (ay==='bottom'?-5:5));
+  }
+
+  // 꼭짓점 좌표 (축 아래)
+  ctx.fillStyle = '#111'; ctx.font = 'bold 22px system-ui';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  const vR = sw(a,0), vL = sw(-a,0);
+  ctx.fillText(`(${a.toFixed(1)}, 0)`, vR.x, vR.y + 12);
+  ctx.fillText(`(${(-a).toFixed(1)}, 0)`, vL.x, vL.y + 12);
+
+  // 초점 좌표 (안쪽, 위)
+  ctx.font = 'bold 23px system-ui'; ctx.textBaseline = 'bottom';
+  const f1s = sw(-c,0), f2s = sw(c,0);
+  ctx.textAlign = 'left';
+  ctx.fillText(`F₁(−${c.toFixed(1)}, 0)`, f1s.x + 6, f1s.y - 6);
+  ctx.textAlign = 'right';
+  ctx.fillText(`F₂(${c.toFixed(1)}, 0)`, f2s.x - 6, f2s.y - 6);
+
+  // 점근선 방정식 — 우하단 (방정식과 겹침 방지)
+  ctx.fillStyle = '#555'; ctx.font = 'bold 22px system-ui';
+  ctx.textAlign = 'right'; ctx.textBaseline = 'bottom';
+  ctx.fillText(`y = ±${slope.toFixed(2)}x`, W - 10, H - 10);
+  ctx.restore();
+
+  // 방정식 — 좌상단
+  const a2 = (a*a).toFixed(1), b2 = (b*b).toFixed(1);
+  drawFracEq(ctx, 'x²', a2, '−', 'y²', b2, 10, 10, 'rgba(79,82,221,0.9)');
+}
+
+// ============================================================
+//  TAB SWITCHING
+// ============================================================
+const titles = {
+  'parabola':       { h1: '포물선의 정의',    sub: '한 직선 <em>l</em>(준선)과 한 점 <em>F</em>(초점)에 이르는 거리가 같은 점들의 집합' },
+  'parabola-prop':  { h1: '포물선의 성질',    sub: 'p 값에 따라 포물선의 모양과 초점·준선이 어떻게 달라지는지 탐구합니다' },
+  'ellipse':        { h1: '타원의 정의',      sub: '두 점 F₁, F₂(초점)으로부터의 거리의 합이 일정한 점들의 집합' },
+  'ellipse-prop':   { h1: '타원의 성질',      sub: 'a, b 값 변화에 따른 초점의 위치와 타원의 모양 변화를 탐구합니다' },
+  'hyperbola':      { h1: '쌍곡선의 정의',    sub: '두 점 F₁, F₂(초점)으로부터의 거리의 차가 일정한 점들의 집합' },
+  'hyperbola-prop': { h1: '쌍곡선의 성질',    sub: 'a, b 값 변화에 따른 초점·점근선의 변화를 탐구합니다' },
+};
+
+const TAB_ORDER = ['parabola','parabola-prop','ellipse','ellipse-prop','hyperbola','hyperbola-prop'];
+
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', TAB_ORDER[i] === name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.id === 'tab-' + name);
+  });
+  document.getElementById('main-title').textContent = titles[name].h1;
+  document.getElementById('main-subtitle').innerHTML = titles[name].sub;
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+pDraw(); pUpdatePanel();
+eDraw(); eUpdatePanel();
+hDraw(); hUpdatePanel();
+ppDraw(); ppUpdatePanel();
+epDraw(); epUpdatePanel();
+hpDraw(); hpUpdatePanel();
+</script>
+</body>
+</html>
