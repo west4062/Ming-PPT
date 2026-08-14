@@ -6,7 +6,8 @@
       "Bash(start:*)",
       "Bash(cmd.exe:*)",
       "PowerShell(Get-Process *)",
-      "WebFetch(domain:api.github.com)"
+      "WebFetch(domain:api.github.com)",
+      "PowerShell(cd \"C:\\\\Users\\\\user\\\\Documents\\\\GitHub\\\\Ming-PPT\\\\음료주문\"; Start-Process powershell -ArgumentList '-NoExit','-Command','python -m http.server 8899' -WindowStyle Hidden; Start-Sleep -Seconds 1; Invoke-WebRequest -Uri \"http://localhost:8899/index.html\" -UseBasicParsing | Select-Object -ExpandProperty StatusCode)"
     ]
   }
 }
